@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StockTracker Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+
+    <script type="module" src="script.js"></script>
+  </head>
+  <body class="bg-gray-100 font-sans antialiased text-gray-800">
+    <header class="bg-blue-700 text-white shadow-md">
+      <div
+        class="container mx-auto px-4 py-4 max-w-5xl flex flex-col md:flex-row justify-between items-center"
+      >
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+          <i class="fa-solid fa-chart-line"></i> StockTracker Pro
+        </h1>
+
+        <!-- Portfolio Stats -->
+        <div class="flex gap-10 mt-4 md:mt-0">
+          <!-- Portfolio Value -->
+          <div class="grid text-center">
+            <span class="text-sm text-blue-200">Portfolio Value</span>
+            <span class="font-bold text-xl" id="header-portfolio-value">
+              $2,962.20
+            </span>
+          </div>
+
+          <!-- Stocks Owned -->
+          <div class="grid text-center">
+            <span class="text-sm text-blue-200">Stocks Owned</span>
+            <span class="font-bold text-xl" id="header-stocks-owned"> 1 </span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 max-w-5xl">
+      <section id="search-section" class="mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <span id="search-error" class="text-red-500 block mb-2"> </span>
+          <form id="search-form" class="flex flex-col md:flex-row gap-3">
+            <div class="relative flex-grow">
+              <i
+                class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              ></i>
+              <input
+                type="search"
+                id="stock-input"
+                placeholder="Enter stock symbol (e.g., AAPL, TSLA)"
+                class="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+            <button
+              type="submit"
+              id="search-stock"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+            >
+              Search Stock
+            </button>
+          </form>
+          <div
+            id="quick-search-btns"
+            class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600"
+          >
+            <span class="font-medium">Quick Search:</span>
+            <button
+              id="AAPL-btn"
+              type="button"
+              value="AAPL"
+              class="quick-search-btn px-4 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors font-semibold"
+            >
+              AAPL
+            </button>
+            <button
+              id="GOOGL-btn"
+              type="button"
+              value="GOOGL"
+              class="quick-search-btn px-4 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors font-semibold"
+            >
+              GOOGL
+            </button>
+            <button
+              id="MSFT-btn"
+              type="button"
+              value="MSFT"
+              class="quick-search-btn px-4 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors font-semibold hidden sm:block"
+            >
+              MSFT
+            </button>
+            <button
+              id="TSLA-btn"
+              type="button"
+              value="TSLA"
+              class="quick-search-btn px-4 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors font-semibold hidden sm:block"
+            >
+              TSLA
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="active-stock-section" class="mb-10">
+        <article
+          class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+        >
+          <div
+            class="p-6 flex justify-between items-start bg-blue-50/30 border-b border-gray-100"
+          >
+            <div>
+              <h2
+                class="text-3xl font-extrabold text-gray-900"
+                id="active-name"
+              >
+                Apple Inc.
+              </h2>
+              <span
+                class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase mt-2 inline-block"
+                id="active-symbol"
+                >AAPL</span
+              >
+            </div>
+            <button
+              id="btn-add-watchlist"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
+            >
+              <i class="fa-solid fa-star"></i>
+              <span class="hidden sm:inline">Add to Watchlist</span>
+            </button>
+          </div>
+
+          <div class="p-8">
+            <div
+              class="flex flex-col md:flex-row justify-between items-center gap-8"
+            >
+              <div class="text-center md:text-left flex-shrink-0">
+                <h3
+                  class="text-6xl font-black text-gray-900 tracking-tight"
+                  id="active-price"
+                >
+                  $111.42
+                </h3>
+                <p
+                  class="text-green-500 font-bold text-lg mt-2"
+                  id="active-change"
+                >
+                  +$3.82 (+3.43%)
+                </p>
+              </div>
+
+              <div
+                class="grid md:grid-cols-2 gap-x-12 gap-y-6 bg-gray-50 p-6 rounded-xl border border-gray-100 w-full md:w-auto flex-grow max-w-lg"
+              >
+                <div
+                  class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
+                >
+                  <span
+                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                    >Open</span
+                  >
+                  <span id="open-amount" class="font-extrabold text-gray-900"
+                    >$105.26</span
+                  >
+                </div>
+                <div
+                  class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
+                >
+                  <span
+                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                    >High</span
+                  >
+                  <span id="high-amount" class="font-extrabold text-gray-900"
+                    >$118.04</span
+                  >
+                </div>
+                <div
+                  class="flex justify-between items-center gap-4 pt-2 border-b border-gray-200 sm:border-0"
+                >
+                  <span
+                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                    >Low</span
+                  >
+                  <span id="low-amount" class="font-extrabold text-gray-900"
+                    >$108.72</span
+                  >
+                </div>
+                <div class="flex justify-between items-center gap-4 pt-2">
+                  <span
+                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                    >Volume</span
+                  >
+                  <span id="volume-amount" class="font-extrabold text-gray-900"
+                    >8,263,591</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-8 bg-slate-50 border-t border-gray-200">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">
+              Portfolio Management
+            </h3>
+
+            <div class="space-y-6">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2"
+                  >Number of Shares Owned:</label
+                >
+                <div class="flex flex-wrap md:flex-nowrap gap-3">
+                  <input
+                    type="number"
+                    id="shares-input"
+                    placeholder="e.g., 10"
+                    class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white shadow-sm"
+                  />
+                  <button
+                    id="btn-update-shares"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 mt-1 sm:mt-0 rounded-lg font-bold transition-all shadow-sm whitespace-normal sm:whitespace-nowrap mx-auto"
+                  >
+                    Update Shares
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex flex-col md:flex-row gap-4 pt-2">
+                <div
+                  class="flex-1 bg-white border border-gray-200 p-5 rounded-xl flex justify-between items-center shadow-sm"
+                >
+                  <span class="text-gray-500 font-semibold"
+                    >Current Holdings:</span
+                  >
+                  <span class="text-gray-900 font-black text-base sm:text-xl"
+                    >10 shares</span
+                  >
+                </div>
+
+                <div
+                  class="flex-1 bg-white border border-gray-200 p-5 rounded-xl flex justify-between items-center shadow-sm"
+                >
+                  <span class="text-gray-500 font-semibold"
+                    >Position Value:</span
+                  >
+                  <span class="text-gray-900 font-black text-base sm:text-xl"
+                    >$1114.20</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section id="watchlist-section" class="mb-12">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <i class="fa-solid fa-star text-blue-500"></i> Your Watchlist
+          </h3>
+          <button
+            class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold shadow-sm flex items-center gap-2 transition-all"
+          >
+            <i class="fa-solid fa-arrows-rotate text-blue-500"></i>
+            <span class="hidden sm:inline"> Refresh Prices</span>
+          </button>
+        </div>
+
+        <div
+          id="watchlist-empty"
+          class="hidden bg-white border-2 border-dashed border-gray-300 rounded-xl p-16 text-center"
+        >
+          <div class="text-gray-300 text-6xl mb-4">
+            <i class="fa-solid fa-chart-simple"></i>
+          </div>
+          <p class="text-gray-600 font-bold text-xl mb-1">
+            Your watchlist is empty
+          </p>
+          <p class="text-gray-400">
+            Search for stocks and add them to track their performance
+          </p>
+        </div>
+
+        <div id="watchlist-populated" class="space-y-4">
+          <article
+            class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:shadow-md"
+          >
+            <div class="flex-1 w-full md:w-auto">
+              <h4 class="font-bold text-gray-900 text-lg">Apple Inc.</h4>
+              <p
+                class="text-xs text-gray-500 font-bold uppercase tracking-wider"
+              >
+                AAPL
+              </p>
+            </div>
+
+            <div
+              class="flex-1 text-center font-black text-2xl text-gray-900 w-full md:w-auto"
+            >
+              $262.04
+            </div>
+
+            <div class="flex-1 text-center w-full md:w-auto">
+              <span
+                class="text-green-500 font-bold bg-green-50 px-3 py-1 rounded-full text-sm"
+                >+$1.75 (+0.67%)</span
+              >
+            </div>
+
+            <div
+              class="flex-1 text-center text-gray-500 font-semibold w-full md:w-auto"
+            >
+              10 shares
+            </div>
+
+            <div
+              class="flex-1 text-center font-bold text-xl text-gray-900 w-full md:w-auto"
+            >
+              $2620.40
+            </div>
+
+            <div class="flex gap-3 justify-end w-full md:w-auto">
+              <button
+                class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors flex items-center justify-center shadow-sm"
+                title="View Details"
+              >
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </button>
+              <button
+                class="w-10 h-10 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center shadow-sm"
+                title="Remove from Watchlist"
+              >
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer
+      class="bg-white border-t border-gray-200 py-2 text-center text-gray-500 text-sm mt-auto"
+    >
+      <p>Copyright Mishal Hasan 2026</p>
+    </footer>
+  </body>
+</html>
