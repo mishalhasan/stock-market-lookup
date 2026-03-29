@@ -12,7 +12,9 @@
 
     <script type="module" src="script.js"></script>
   </head>
-  <body class="bg-gray-100 font-sans antialiased text-gray-800">
+  <body
+    class="bg-gray-100 font-sans antialiased text-gray-800 min-h-screen flex flex-col"
+  >
     <header class="bg-blue-700 text-white shadow-md">
       <div
         class="container mx-auto px-4 py-4 max-w-5xl flex flex-col md:flex-row justify-between items-center"
@@ -66,7 +68,7 @@
           </form>
           <div
             id="quick-search-btns"
-            class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600"
+            class="mt-4 inline-flex flex-wrap items-center gap-2 text-sm text-gray-600"
           >
             <span class="font-medium">Quick Search:</span>
             <button
@@ -106,8 +108,16 @@
       </section>
 
       <section id="active-stock-section" class="mb-10">
+        <!-- <article
+          id="loading"
+          class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[25vh] flex flex-col gap-2 items-center justify-center">
+          <div
+            class="w-10 h-10 border-4 border-t-blue-500 rounded-full animate-spin"
+          ></div>
+          <span id="loading_txt">Searching ...</span>
+        </article> -->
         <article
-          class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+          class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
         >
           <div
             class="p-6 flex justify-between items-start bg-blue-50/30 border-b border-gray-100"
@@ -142,15 +152,8 @@
                 <h3
                   class="text-6xl font-black text-gray-900 tracking-tight"
                   id="active-price"
-                >
-                  $111.42
-                </h3>
-                <p
-                  class="text-green-500 font-bold text-lg mt-2"
-                  id="active-change"
-                >
-                  +$3.82 (+3.43%)
-                </p>
+                ></h3>
+                <p class="font-bold text-lg mt-2" id="active-change"></p>
               </div>
 
               <div
@@ -163,9 +166,10 @@
                     class="text-gray-500 text-sm uppercase font-bold tracking-wider"
                     >Open</span
                   >
-                  <span id="open-amount" class="font-extrabold text-gray-900"
-                    >$105.26</span
-                  >
+                  <span
+                    id="open-amount"
+                    class="font-extrabold text-gray-900"
+                  ></span>
                 </div>
                 <div
                   class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
@@ -174,9 +178,10 @@
                     class="text-gray-500 text-sm uppercase font-bold tracking-wider"
                     >High</span
                   >
-                  <span id="high-amount" class="font-extrabold text-gray-900"
-                    >$118.04</span
-                  >
+                  <span
+                    id="high-amount"
+                    class="font-extrabold text-gray-900"
+                  ></span>
                 </div>
                 <div
                   class="flex justify-between items-center gap-4 pt-2 border-b border-gray-200 sm:border-0"
@@ -185,18 +190,20 @@
                     class="text-gray-500 text-sm uppercase font-bold tracking-wider"
                     >Low</span
                   >
-                  <span id="low-amount" class="font-extrabold text-gray-900"
-                    >$108.72</span
-                  >
+                  <span
+                    id="low-amount"
+                    class="font-extrabold text-gray-900"
+                  ></span>
                 </div>
                 <div class="flex justify-between items-center gap-4 pt-2">
                   <span
                     class="text-gray-500 text-sm uppercase font-bold tracking-wider"
                     >Volume</span
                   >
-                  <span id="volume-amount" class="font-extrabold text-gray-900"
-                    >8,263,591</span
-                  >
+                  <span
+                    id="volume-amount"
+                    class="font-extrabold text-gray-900"
+                  ></span>
                 </div>
               </div>
             </div>
@@ -346,5 +353,44 @@
     >
       <p>Copyright Mishal Hasan 2026</p>
     </footer>
+
+    <section id="picker-modal" class="hidden">
+      <div
+        id="picker-modal-overlay"
+        class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4"
+      >
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        >
+          <header
+            class="p-5 border-b border-gray-100 flex justify-between items-center bg-white"
+          >
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-magnifying-glass text-blue-600 text-xl"></i>
+              <h2 class="text-xl font-bold text-gray-900">Select a Stock</h2>
+            </div>
+            <button
+              id="close-picker-btn"
+              class="text-gray-400 hover:text-blue-600 transition-colors p-1"
+            >
+              <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+          </header>
+
+          <div class="px-6 py-4 pb-2 bg-white">
+            <p class="text-sm text-gray-500 font-medium">
+              Multiple stocks match your search. Please select one:
+            </p>
+          </div>
+
+          <div
+            class="px-6 pb-6 overflow-y-auto space-y-3"
+            id="picker-results-container"
+          >
+            <!-- ADD STOCKS HERE VIA JS-->
+          </div>
+        </div>
+      </div>
+    </section>
   </body>
 </html>
