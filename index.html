@@ -107,160 +107,161 @@
         </div>
       </section>
 
-      <section id="active-stock-section" class="mb-10">
-        <!-- <article
-          id="loading"
-          class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[25vh] flex flex-col gap-2 items-center justify-center">
+      <section id="active-stock-section">
+        <div id="active-state-container" class="mb-10">
           <div
-            class="w-10 h-10 border-4 border-t-blue-500 rounded-full animate-spin"
-          ></div>
-          <span id="loading_txt">Searching ...</span>
-        </article> -->
-        <article
-          class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-        >
-          <div
-            class="p-6 flex justify-between items-start bg-blue-50/30 border-b border-gray-100"
+            id="loading"
+            class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[25vh] flex-col gap-2 items-center justify-center"
           >
-            <div>
-              <h2
-                class="text-3xl font-extrabold text-gray-900"
-                id="active-name"
-              >
-                Apple Inc.
-              </h2>
-              <span
-                class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase mt-2 inline-block"
-                id="active-symbol"
-                >AAPL</span
-              >
-            </div>
-            <button
-              id="btn-add-watchlist"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
-            >
-              <i class="fa-solid fa-star"></i>
-              <span class="hidden sm:inline">Add to Watchlist</span>
-            </button>
-          </div>
-
-          <div class="p-8">
             <div
-              class="flex flex-col md:flex-row justify-between items-center gap-8"
+              class="w-10 h-10 border-4 border-t-blue-500 rounded-full animate-spin"
+            ></div>
+            <span id="loading_txt">Searching ...</span>
+          </div>
+          <article
+            id="active-stock-results"
+            class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+          >
+            <div
+              class="p-6 flex justify-between items-start bg-blue-50/30 border-b border-gray-100"
             >
-              <div class="text-center md:text-left flex-shrink-0">
-                <h3
-                  class="text-6xl font-black text-gray-900 tracking-tight"
-                  id="active-price"
-                ></h3>
-                <p class="font-bold text-lg mt-2" id="active-change"></p>
-              </div>
-
-              <div
-                class="grid md:grid-cols-2 gap-x-12 gap-y-6 bg-gray-50 p-6 rounded-xl border border-gray-100 w-full md:w-auto flex-grow max-w-lg"
-              >
-                <div
-                  class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
-                >
-                  <span
-                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
-                    >Open</span
-                  >
-                  <span
-                    id="open-amount"
-                    class="font-extrabold text-gray-900"
-                  ></span>
-                </div>
-                <div
-                  class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
-                >
-                  <span
-                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
-                    >High</span
-                  >
-                  <span
-                    id="high-amount"
-                    class="font-extrabold text-gray-900"
-                  ></span>
-                </div>
-                <div
-                  class="flex justify-between items-center gap-4 pt-2 border-b border-gray-200 sm:border-0"
-                >
-                  <span
-                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
-                    >Low</span
-                  >
-                  <span
-                    id="low-amount"
-                    class="font-extrabold text-gray-900"
-                  ></span>
-                </div>
-                <div class="flex justify-between items-center gap-4 pt-2">
-                  <span
-                    class="text-gray-500 text-sm uppercase font-bold tracking-wider"
-                    >Volume</span
-                  >
-                  <span
-                    id="volume-amount"
-                    class="font-extrabold text-gray-900"
-                  ></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-8 bg-slate-50 border-t border-gray-200">
-            <h3 class="text-xl font-bold text-gray-800 mb-6">
-              Portfolio Management
-            </h3>
-
-            <div class="space-y-6">
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2"
-                  >Number of Shares Owned:</label
-                >
-                <div class="flex flex-wrap md:flex-nowrap gap-3">
-                  <input
-                    type="number"
-                    id="shares-input"
-                    placeholder="e.g., 10"
-                    class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white shadow-sm"
-                  />
-                  <button
-                    id="btn-update-shares"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 mt-1 sm:mt-0 rounded-lg font-bold transition-all shadow-sm whitespace-normal sm:whitespace-nowrap mx-auto"
-                  >
-                    Update Shares
-                  </button>
-                </div>
+                <h2
+                  class="text-3xl font-extrabold text-gray-900"
+                  id="active-name"
+                ></h2>
+                <span
+                  class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase mt-2 inline-block"
+                  id="active-symbol"
+                ></span>
               </div>
+              <button
+                id="btn-add-watchlist"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
+              >
+                <i class="fa-solid fa-star"></i>
+                <span class="hidden sm:inline">Add to Watchlist</span>
+              </button>
+            </div>
 
-              <div class="flex flex-col md:flex-row gap-4 pt-2">
-                <div
-                  class="flex-1 bg-white border border-gray-200 p-5 rounded-xl flex justify-between items-center shadow-sm"
-                >
-                  <span class="text-gray-500 font-semibold"
-                    >Current Holdings:</span
-                  >
-                  <span class="text-gray-900 font-black text-base sm:text-xl"
-                    >10 shares</span
-                  >
+            <div class="p-8">
+              <div
+                class="flex flex-col md:flex-row justify-between items-center gap-8"
+              >
+                <div class="text-center md:text-left flex-shrink-0">
+                  <h3
+                    class="text-6xl font-black text-gray-900 tracking-tight"
+                    id="active-price"
+                  ></h3>
+                  <p class="font-bold text-lg mt-2" id="active-change"></p>
                 </div>
 
                 <div
-                  class="flex-1 bg-white border border-gray-200 p-5 rounded-xl flex justify-between items-center shadow-sm"
+                  class="grid md:grid-cols-2 gap-x-12 gap-y-6 bg-gray-50 p-6 rounded-xl border border-gray-100 w-full md:w-auto flex-grow max-w-lg"
                 >
-                  <span class="text-gray-500 font-semibold"
-                    >Position Value:</span
+                  <div
+                    class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
                   >
-                  <span class="text-gray-900 font-black text-base sm:text-xl"
-                    >$1114.20</span
+                    <span
+                      class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                      >Open</span
+                    >
+                    <span
+                      id="open-amount"
+                      class="font-extrabold text-gray-900"
+                    ></span>
+                  </div>
+                  <div
+                    class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
                   >
+                    <span
+                      class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                      >High</span
+                    >
+                    <span
+                      id="high-amount"
+                      class="font-extrabold text-gray-900"
+                    ></span>
+                  </div>
+                  <div
+                    class="flex justify-between items-center gap-4 pt-2 border-b border-gray-200 sm:border-0"
+                  >
+                    <span
+                      class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                      >Low</span
+                    >
+                    <span
+                      id="low-amount"
+                      class="font-extrabold text-gray-900"
+                    ></span>
+                  </div>
+                  <div class="flex justify-between items-center gap-4 pt-2">
+                    <span
+                      class="text-gray-500 text-sm uppercase font-bold tracking-wider"
+                      >Volume</span
+                    >
+                    <span
+                      id="volume-amount"
+                      class="font-extrabold text-gray-900"
+                    ></span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </article>
+
+            <div class="p-8 bg-slate-50 border-t border-gray-200">
+              <h3 class="text-xl font-bold text-gray-800 mb-6">
+                Portfolio Management
+              </h3>
+
+              <div class="space-y-6">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-2"
+                    >Number of Shares Owned:</label
+                  >
+                  <div class="flex flex-wrap md:flex-nowrap gap-3">
+                    <input
+                      type="number"
+                      id="shares-input"
+                      placeholder="e.g., 10"
+                      class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white shadow-sm"
+                    />
+                    <button
+                      id="btn-update-shares"
+                      class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 mt-1 sm:mt-0 rounded-lg font-bold transition-all shadow-sm whitespace-normal sm:whitespace-nowrap mx-auto"
+                    >
+                      Update Shares
+                    </button>
+                  </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-4 pt-2">
+                  <div
+                    class="flex-1 bg-white border border-gray-200 p-5 rounded-xl flex justify-between items-center shadow-sm"
+                  >
+                    <span class="text-gray-500 font-semibold"
+                      >Current Holdings:</span
+                    >
+                    <span class="text-gray-900 font-black text-base sm:text-xl"
+                      >10 shares</span
+                    >
+                  </div>
+
+                  <div
+                    class="flex-1 bg-white border border-gray-200 p-5 rounded-xl flex justify-between items-center shadow-sm"
+                  >
+                    <span class="text-gray-500 font-semibold"
+                      >Position Value:</span
+                    >
+                    <span class="text-gray-900 font-black text-base sm:text-xl"
+                      >$1114.20</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section id="watchlist-section" class="mb-12">
