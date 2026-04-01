@@ -2,7 +2,6 @@
 //import { API_KEY } from "./config.js";
 const API_KEY = "YOUR_API_KEY";
 const API_KEY2 = "DEMO";
-let last_error; //Keep track of error ???
 const watchlist = [];
 let pickerCache = {};
 const cache = {}; //global cache
@@ -24,10 +23,8 @@ let searchState = {
 const activeDiv = document.querySelector("#active-state-container");
 const stockResults = document.querySelector("#active-stock-results");
 const search_input = document.querySelector("#stock-input");
-//const search_btn = document.querySelector("#search-stock");
 const search_form = document.querySelector("#search-form");
 const search_error = document.querySelector("#search-error");
-//const qs_btn = document.querySelectorAll(".quick-search-btn");
 const qs_btns = document.querySelector("#quick-search-btns");
 const picker_close_bttn = document.querySelector("#close-picker-btn");
 const picker_modal = document.querySelector("#picker-modal");
@@ -55,37 +52,7 @@ class DataNotFoundError extends Error {
   }
 }
 
-/*class InvalidJSONError extends Error {
-  constructor(message = "Invalid response from API") {
-    super(message);
-    this.name = "InvalidJSONError";
-  }
-}*/
-
 /*---- EVENT HANDLER FUNCTIONS ----*/
-
-/*Get user's picked stock and update UI. Utilize picker cache to find details of user choice - data stored in cache due to data flow logic established to mitigate API usage*/
-async function handleStockPicker(event) {
-  //Grab user selection
-  const stockPick = event.target.value;
-
-  //Guard
-  if (!stockPick || !pickerCache[stockPick]) return;
-
-  //Initiate Loading
-  displaySearchLoading(`Loading ${pickerCache[stockPick]}`);
-
-  // Grab stock info from stockpicker cache based on user selection & update UI
-  displayActiveStockData(pickerCache[stockPick]);
-  //displayActiveStockData(stockCache[stockPick], compNameCache[stockPick]);
-
-  //Enable search buttons
-  enableButtons();
-
-  //Close Modal
-  closeStockPicker();
-  //picker_modal.classList.add("hidden");
-}
 
 /*Submits form through any quick search button*/
 function handleQuickSearch(event) {
@@ -157,28 +124,33 @@ async function handleSearchForm(event) {
 
     const bestMatch = await getBestMatch(input);
     if (!bestMatch || bestMatch.length === 0) {
-      updateSearchState({ status: "fail", lastError: err, terminate: true });
-      return;
+      throw new DataNotFoundError(`No matching stock found for "${input}"`);
     }
 
+    console.log("BestMatch contents", bestMatch);
+
     if (bestMatch.length === 1) {
-      const { symbol, name } = bestMatch;
+      const { symbol, name } = bestMatch[0];
 
       if (symbol && name) {
         await delay(2000); // API rate limit
         displaySearchLoading(`Searching for ${symbol} stock`);
 
-        const stockData = await getAllStockData(symbol);
-
-        if (stockData) {
-          allStockData = combineStockInfo(stockData, name);
-          cache[allStockData.symbol] = allStockData;
-          displayActiveStockData(allStockData);
-          updateSearchState({ status: "success", terminate: true });
+        let stockData = await getStockData(symbol);
+        console.log("stockData before", stockData);
+        //getStockData is a soft fail for error type DataNotFoundError, so must throw explicit error here
+        if (!stockData) {
+          throw new DataNotFoundError(`No stock data found for ${symbol}`);
         }
+        stockData = combineStockInfo(stockData, name);
+        console.log("stockData after if+combine", stockData);
+        //cache[stockData.symbol] = stockData;
+        displayActiveStockData(stockData);
+        updateSearchState({ status: "success", terminate: true });
       }
     }
 
+    //BestMatch returned here is array of objects
     if (bestMatch.length > 1) {
       await delay(2000);
       displaySearchLoading(`Searching for stocks`);
@@ -218,29 +190,11 @@ async function handleSearchForm(event) {
         displaySearchLoading(`Loading ${pickerCache[pickedStock]}`);
         // Grab stock info from stockpicker cache based on user selection & update UI
         displayActiveStockData(pickerCache[pickedStock]);
+        //cache[allStockData.symbol] = allStockData;
         updateSearchState({ status: "success", terminate: true });
         return;
       }
     }
-    /*const { symbol, name } = bestMatch;
-
-    if (symbol && name) {
-      await delay(2000); // API rate limit
-      displaySearchLoading(`Searching for ${symbol} stock`);
-
-      const stockData = await getAllStockData(symbol);
-      allStockData = combineStockInfo(stockData, name);
-
-      if (allStockData) {
-        cache[allStockData.symbol] = allStockData;
-        displayActiveStockData(allStockData);
-        updateSearchState({ status: "success", terminate: true });
-      } 
-  }
-    */
-
-    //displayActiveStockData(bestMatch);
-    //updateSearchState({ status: "success", terminate: true });
   } catch (err) {
     //console.error(err);
     updateSearchState({ status: "fail", lastError: err, terminate: true });
@@ -251,118 +205,6 @@ async function handleSearchForm(event) {
     hideLoading();
   }
 }
-/*async function handleSearchForm(event) {
-  //Setup start of search
-  event.preventDefault();
-  disableButtons();
-  resetSearchState();
-  updateSearchState({ stage: "userInput", status: "pending" });
-
-  console.log("Button clicked");
-  let input = search_input.value.trim();
-
-  if (input !== "") {
-    search_error.textContent = "";
-
-    //Show Active Stock Section and display loading to user
-    displaySearchLoading(`Searching for ${input} stock`);
-
-    //Try and see if user gave symbol or companyName through matching input with dictionary
-    if (checkStockDictionary(input.toLowerCase())) {
-      input = checkStockDictionary(input);
-    }
-
-    //If user matched in dictionary use updated input value as symbol, else assume unique symbol
-    let allStockData = await getAllStockData(input);
-
-    //If successful match found, exit from handler, enable API using buttons & update UI
-    if (allStockData) {
-      //Add data to cache
-      cache[allStockData.symbol] = allStockData;
-
-      //Update loading state, and UI. Re-enable buttons
-      displaySearchLoading(`Loading for ${input} stock`);
-      displayActiveStockData(allStockData);
-      enableButtons();
-
-      return;
-    }
-
-    // OLD CODE COMMENT START
-    // let stockData = await getStockData(input);
-    // console.log("Extracted from API", stockData);
-    // //If successful match found, exit from handler, enable quick search buttons & update UI
-    // if (stockData) {
-    //   //let compName = compNameCache[stockData.symbol];
-    //   let compName = cache[stockData.symbol].name;
-    //   if (!compName) {
-    //     compName = await getCompanyName(stockData.symbol);
-    //     //compNameCache[stockData.symbol] = compName;
-    //     // allStockData = combineStockInfo(stockData, compName);
-    //     // addToCache(allStockData);
-    //   }
-    //
-    //   //Combine into one object
-    //   const allStockData = { ...stockData, name: compName };
-    //   //Add to cache
-    //   cache[stockData.symbol] = allStockData; 
-    //
-    //   displaySearchLoading(`Loading for ${input} stock`);
-    //   //displayActiveStockData(stockData);
-    //   displayActiveStockData(allStockData);
-    //   document
-    //     .querySelectorAll("#search-section button")
-    //     .forEach((b) => (b.disabled = false));
-    //   return;
-    // }
-    // OLD CODE COMMENT END
-
-    console.log("waiting in handleSearchForm before actual getSymbol Call");
-    await delay(2000);
-    const bestMatch = await getBestMatch(input);
-
-    if (!bestMatch) {
-      enableButtons();
-      return; // exits code
-    }
-
-    const { symbol, name } = bestMatch;
-
-    if (symbol && name) {
-      await delay(2000);
-      console.log(
-        "waiting in handleSearchForm after actual getSymbol Call for when 1 symbol is returned",
-      );
-
-      displaySearchLoading(`Searching for ${symbol} stock`);
-
-      const stockData = await getAllStockData(symbol);
-      console.log("Before combine:", symbol, name, stockData);
-      allStockData = combineStockInfo(stockData, name);
-      if (allStockData) {
-        //Add data to cache
-        cache[allStockData.symbol] = allStockData;
-
-        displaySearchLoading(`Loading for ${allStockData.symbol} stock`);
-        displayActiveStockData(allStockData);
-        enableButtons();
-      }
-
-      // OLD CODE COMMENT START
-      // displaySearchLoading(`Searching for ${stockData.symbol} stock`);
-      // const stockData = await getStockData(symbol);
-      // displaySearchLoading(`Loading for ${stockData.symbol} stock`);
-      // displayActiveStockData(stockData);
-      // document
-      //   .querySelectorAll("#search-section button")
-      //   .forEach((b) => (b.disabled = false));
-      // OLD CODE COMMENT END
-    }
-  } else {
-    search_error.textContent = "stock symbol required";
-  }
-}
-*/
 
 /*--- HANDLE SEARCH FUNCTIONS ---*/
 
@@ -392,10 +234,9 @@ async function getStockData(symbol) {
 
     if (err instanceof DataNotFoundError) {
       console.warn("Stock not found for symbol:", symbol);
-      return null; // ✅ SOFT FAIL → allow fallback
+      return null; //  SOFT FAIL → allow fallback
     }
 
-    // ❗ HARD FAIL → bubble up
     console.error("getStockSymbol fx", err);
     throw err;
   }
@@ -450,65 +291,17 @@ async function getAllStockData(symbol) {
     }
     const allStockData = combineStockInfo(stockData, compName);
     return allStockData;
-
-    if (stockData) {
-      //Check for cache first
-      let compName = cache[stockData.symbol]?.name;
-      if (!compName) {
-        //trackAPICalls();
-        compName = await getCompanyName(stockData.symbol);
-      }
-
-      //Check again if compName was updated,
-      if (compName) {
-        //Combine into one object
-        const allStockData = { ...stockData, name: compName };
-        console.log("getAlLStock Func: ", allStockData);
-
-        return allStockData;
-      }
-      //Add to cache
-      //cache[stockData.symbol] = allStockData;
-    }
-
-    //combineStockInfo(stockData, compName)
   } catch (err) {
     // last_error = err;
     console.error(`Error in getAllStockData(${symbol}):`, err);
     throw err;
   }
 }
-/*Combines stock data, with company name in order to maintain 1 set of data being passed through and reduces fragmented data due to data being 
-fetched from multiple API's. Can access company name via ".name"*/
-function combineStockInfo(stockData, compName) {
-  //Combine into one object
-  const allStockData = { ...stockData, name: compName };
-
-  return allStockData;
-}
 
 function addToCache(allStockData) {
   //Saves copy into cache
   cache[allStockData.symbol] = allStockData;
 }
-
-// function successfulAPI(allStockData) {
-//   //Add data to cache
-//   cache[allStockData.symbol] = allStockData;
-
-//   displaySearchLoading(`Loading for ${allStockData.symbol} stock`);
-//   displayActiveStockData(allStockData);
-//   enableButtons();
-
-//   //clear last error ?
-// }
-
-// function combineToCache(stockData, compName) {
-//   const allStockData = combineStockInfo(stockData, compName);
-//   addToCache(allStockData);
-
-//   return allStockData;
-// }
 
 /*Calls API to list bestmatches for user to choose US equities based on user input and returns best symbol.
  If only one symbol found, skips stock picker, and returns symbol. Otherwise stock picker displays*/
@@ -535,79 +328,35 @@ async function getBestMatch(input) {
     if (!usEquities || usEquities.length === 0) {
       //last_error = "No data found";
       //return null;
-      throw new DataNotFoundError("No matching symbols found");
+      throw new DataNotFoundError("No matching results found");
     }
 
     //If only one match, return symbol + compName
     if (usEquities.length === 1) {
-      return {
-        symbol: usEquities[0]["1. symbol"],
-        name: usEquities[0]["2. name"],
-      };
+      return [
+        {
+          symbol: usEquities[0]["1. symbol"],
+          name: usEquities[0]["2. name"],
+        },
+      ];
     }
 
     //If more than 1 match, return entire array
     if (usEquities.length > 1) return usEquities;
-
-    /*
-      //If more than one stock in bestMatch, have user pick appropriate match. Before displaying get all pickerData
-    await delay(2000);
-    displaySearchLoading(`Searching for stocks`);
-
-    const pickerData = await getAllStocksPickerData(usEquities);
-
-    if (pickerData) {
-      displayStockPicker(pickerData);
-    }
-
-    const selectedStock = await getAllStocksPickerData(usEquities);
-
-    if (!selectedStock) {
-      return null; // Termination point on user selection: cancel = null
-    } */
-
-    //Get user selected stock as return value - instead of async, make sync calls
-    //return selectedStock;
-
-    //return null;
-
-    // const userPickedSymbol = handleStockerPicker;
-    //return userPickedSymbol;
-
-    //console.log(data);
   } catch (err) {
+    console.error(err);
     throw err;
-    // console.error(err);
-    // displayError(err);
-    // document
-    //   .querySelectorAll("#search-section button")
-    //   .forEach((b) => (b.disabled = false));
   }
 }
-
-// getStockData("IBM");
-// await delay(3000);
-// getSymbol("bank");
 
 /*Gets all the stock picker data needed from SYMBOL_SEARCH endpoint and formats it. Also adds data to cache to reduce API calls*/
 async function getAllStocksPickerData(compData) {
   try {
-    //stockCache.length = 0;
-    //const pickerData = [];
-
-    //pickerCache.length = 0;
     pickerCache = {};
 
     for (const stock of compData) {
       const symbol = stock["1. symbol"];
       const compName = stock["2. name"];
-
-      // let stockData = stockCache[symbol];
-
-      // if (!stockData) {
-      //   stockData = await getStockData(symbol);
-      //   stockCache[symbol] = stockData; // store in global cache
-      // }
 
       await delay(3000);
       const stockData = await getStockData(symbol);
@@ -626,20 +375,6 @@ async function getAllStocksPickerData(compData) {
       };
 
       pickerCache[symbol] = fullStockData;
-      // pickerCache.push(fullStockData);
-
-      /* } 
-      pickerData.push({
-        symbol,
-        name: compName,
-        open: stockData.open,
-        high: stockData.high,
-        low: stockData.low,
-        price: stockData.price,
-        volume: stockData.volume,
-        change: stockData.change,
-        ["change percent"]: stockData["change percent"],
-      });*/
     }
 
     console.log(pickerCache);
@@ -657,9 +392,6 @@ async function getAllStocksPickerData(compData) {
 /*Takes in stocks data from SYMBOL_SEARCH to be displayed in picker modal.  */
 async function displayStockPicker(pickerStocks) {
   let textHTML = "";
-
-  // let fontColor;
-  // let stockChange;
 
   for (const stockData of pickerStocks) {
     // Parse numeric values once
@@ -679,14 +411,6 @@ async function displayStockPicker(pickerStocks) {
       const sign = changeNum === 0 ? "" : "+";
       stockChangeTxt = `${sign}$${changeNum.toFixed(2)} (+${changePercentNum.toFixed(2)})`;
     }
-
-    /*if (parseFloat(stockData.change) < 0) {
-      fontColor = "text-red-500";
-      stockChangeTxt = `-\$${Math.abs(format2Decimal(stockData.change))} (${format2Decimal(stockData["change percent"])})`;
-    } else {
-      fontColor = "text-green-500";
-      stockChangeTxt = `+\$${format2Decimal(stockData.change)} (+${format2Decimal(stockData["change percent"])})`;
-    }*/
 
     //Build HTML button
     textHTML += `<button value="${stockData.symbol}"
@@ -729,21 +453,6 @@ async function displayStockPicker(pickerStocks) {
   picker_modal.classList.remove("hidden");
 }
 
-/*Sets cache with stockData so that fewer API calls need to be made. Cache is reset for every new pickerData in   */
-// function setStockCache(stockData) {
-//   const symbol = stockData.symbol;
-//   stockCache[symbol] = {
-//     symbol,
-//     open: stockData.open,
-//     high: stockData.high,
-//     low: stockData.low,
-//     price: stockData.price,
-//     volume: stockData.volume,
-//     change: stockData.change,
-//     ["change percent"]: stockData["change percent"],
-//   };
-// }
-
 function displayActiveStockData(stockData) {
   if (!stockData || !stockData.symbol) {
     console.warn("Skipping invalid stock data:", stockData);
@@ -765,13 +474,9 @@ function displayActiveStockData(stockData) {
     compName = await getCompanyName(stockData.symbol);
     compNameCache[stockData.symbol] = compName;
   }*/
-  //Show active stock results article (replaces loading state)
-  // loadingDiv.classList.add("hidden");
-  // stockResults.classList.remove("hidden");
 
-  //Ensure search section is visible (fallback)
+  //Ensure search article is visible (fallback)
   activeDiv.classList.remove("hidden");
-  //stockResults.classList.remove("hidden");
   showActiveResults();
 
   console.log("In displayActive", stockData);
@@ -813,6 +518,17 @@ function displayActiveStockData(stockData) {
 }
 
 /*-- HELPER FUNCTIONS --*/
+
+/**
+ * Combines stock data, with company name in order to maintain 1 set of data being passed through and reduces fragmented data due to data being
+ * fetched from multiple API's. Can access company name via ".name"
+ */
+function combineStockInfo(stockData, compName) {
+  //Combine into one object
+  const allStockData = { ...stockData, name: compName };
+
+  return allStockData;
+}
 
 /**
  * Updates one or more fields in searchState (stage, status, lastError, data).
@@ -870,15 +586,12 @@ function closeStockPicker() {
 /*Toggles loader to hide, should be used after API call*/
 function hideLoading() {
   // after fetch
-  //  document.getElementById("loading").classList.add("hidden");
   document.getElementById("loading").classList.replace("flex", "hidden");
-  //document.getElementById("active-stock-results").classList.remove("hidden");
 }
 
 /*Toggles loader to show, should be used before API call*/
 function showLoading() {
   // show loading
-  // document.getElementById("loading").classList.remove("hidden");
   document.getElementById("loading").classList.replace("hidden", "flex");
   document.getElementById("active-stock-results").classList.add("hidden");
 }
@@ -1068,28 +781,11 @@ async function fetchURL(url) {
     throw err; // already a custom or unknown error
   }
 }
-/*async function fetchURL(url) {
-  const response = await fetch(url).catch(() => {
-    throw new Error("Network error: Unable to reach the server.");
-  });
-
-  //HTTP-level errors
-  if (!response.ok) {
-    throw new Error(`HTTP error! Status: ${response.status}`);
-  }
-  console.log("Testing fetchURL");
-  console.log(response);
-  const data = await response.json().catch(() => {
-    throw new Error("Invalid JSON response from API.");
-  });
-
-  return data;
-}*/
 
 /*Throws errors for API level errors based on Alphaadvantage API responses*/
 function handleAPIErrors(data, apiObj) {
   if (data["Error Message"]) {
-    throw new DataNotFoundError();
+    throw new APIError("Invalid API call");
   }
 
   if (data["Note"] || data["Information"]) {
@@ -1099,13 +795,6 @@ function handleAPIErrors(data, apiObj) {
   if (!data?.[apiObj] || Object.keys(data[apiObj]).length === 0) {
     throw new DataNotFoundError();
   }
-
-  /* if (data["Error Message"]) throw new Error("Invalid stock symbol.");
-  if (data["Note"] || data["Information"])
-    throw new Error("API error. Try again later.");
-  if (!data?.[apiObj] || Object.keys(data[apiObj]).length === 0) {
-    throw new Error("No data found");
-  }*/
 }
 
 /*Displays errors to users above search bar*/
@@ -1128,17 +817,6 @@ document.addEventListener("DOMContentLoaded", function () {
   search_form.addEventListener("submit", handleSearchForm);
 
   qs_btns.addEventListener("click", handleQuickSearch);
-  //picker_results.addEventListener("click", handleStockPicker);
-  /*picker_close_bttn.addEventListener("click", function () {
-    closeStockPicker();
-    updateSearchState({
-      stage: "pickerDisplay",
-      status: "abandoned",
-      terminate: true,
-    });
-  });*/
-
-  //  const symbol = await getSymbol("ba");
 });
 
 console.log("Page is Working");
