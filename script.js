@@ -2,7 +2,8 @@
 //import { API_KEY } from "./config.js";
 const API_KEY = "YOUR_API_KEY";
 const API_KEY2 = "DEMO";
-const watchlist = [];
+let watchlist = [];
+let portfolio = [];
 let pickerCache = {};
 const cache = {}; //global cache
 let APIcount = 0; // Number of calls made in the current window
@@ -29,6 +30,19 @@ const qs_btns = document.querySelector("#quick-search-btns");
 const picker_close_bttn = document.querySelector("#close-picker-btn");
 const picker_modal = document.querySelector("#picker-modal");
 const picker_results = document.querySelector("#picker-results-container");
+const inputShares = document.getElementById("shares-input");
+const updateSharesBtn = document.getElementById("btn-update-shares");
+const stockName = document.querySelector("#active-name");
+const stockSymbol = document.querySelector("#active-symbol");
+const stockPrice = document.querySelector("#active-price");
+const stockChange = document.querySelector("#active-change");
+const watchlistBtn = document.querySelector("#btn-add-watchlist");
+
+/*---- Toast Notification System ----*/
+const toastContainer = document.getElementById("toast-container");
+const toastMessage = document.getElementById("toast-message");
+const closeToastBtn = document.getElementById("close-toast");
+let toastTimeout; // Variable to track the auto-hide timer
 
 /*---- Setup Error Classes ----*/
 class NetworkError extends Error {
@@ -54,6 +68,43 @@ class DataNotFoundError extends Error {
 
 /*---- EVENT HANDLER FUNCTIONS ----*/
 
+/**
+ * Shows a toast error message to the user for API/background issues.
+ * Uses a small setTimeout to ensure CSS transitions trigger smoothly, since JS
+ * executes immediately and may otherwise skip transition effects.
+ */
+function showToastError(message) {
+  //Set custom error msg, show to user
+  toastMessage.textContent = message;
+  toastContainer.classList.remove("hidden");
+
+  // Small delay to allow the CSS transition to trigger smoothly but quick enough for no user lag
+  setTimeout(() => {
+    toastContainer.classList.remove("translate-y-[-20px]", "opacity-0");
+    toastContainer.classList.add("translate-y-0", "opacity-100");
+  }, 10);
+
+  // Reset any existing timer, then auto-hide after 5 seconds
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => hideToast(), 5000);
+}
+
+/**
+ * Hides the toast error message with a slide/fade effect.
+ * Uses setTimeout to wait for the Tailwind transition duration (300ms) before fully
+ * hiding the element.
+ */
+function hideToast() {
+  // Slide it back up and fade it out
+  toastContainer.classList.remove("translate-y-0", "opacity-100");
+  toastContainer.classList.add("translate-y-[-20px]", "opacity-0");
+
+  // Wait for the CSS transition (300ms) to finish before actually hiding it
+  setTimeout(() => {
+    toastContainer.classList.add("hidden");
+  }, 300);
+}
+
 /*Submits form through any quick search button*/
 function handleQuickSearch(event) {
   // console.log("button is clicked");
@@ -73,7 +124,7 @@ function handleQuickSearch(event) {
 
 /* Validates user input and sends user input to be sent to the API. Usees a waterfall approach, to find whether user inputs symbol or company name was sent by user. 
    Global quote API limited to symbol, must seperately find company name, thus first check stock aliases dictionary, then searches global quote assuming SYMBOL. 
-   If search fails assumes companyname, calls getCompany.*/
+   If search fails assumes companyname, calls getBestMatch.*/
 
 async function handleSearchForm(event) {
   event.preventDefault();
@@ -459,9 +510,6 @@ function displayActiveStockData(stockData) {
     return; // exit early if data is missing
   }
 
-  const stockName = document.querySelector("#active-name");
-  const stockSymbol = document.querySelector("#active-symbol");
-  const stockPrice = document.querySelector("#active-price");
   const stockChange = document.querySelector("#active-change");
   const openVal = document.querySelector("#open-amount");
   const highVal = document.querySelector("#high-amount");
@@ -514,10 +562,170 @@ function displayActiveStockData(stockData) {
     stockChange.textContent = `${sign}$${changeNum.toFixed(2)} (+${changePercentNum.toFixed(2)}%)`;
   }
 
+  //display saved shares for searched stocks
+  displayCurrentStockShares(stockData.symbol, priceNum);
+
   hideLoading();
 }
 
+/*---- PORTFOLIO MANAGEMENT ----*/
+
+/*Handles user portfolio shares via saving into local storage and updating current holdings via update shares buton */
+function handleShares() {
+  console.log("working");
+  console.log(inputShares.value);
+  const numShares = Number(inputShares.value);
+  const searchStockName = validText(stockName.textContent);
+  const searchSymbol = validText(stockSymbol.textContent);
+  const searchPrice = validPrice(stockPrice.textContent);
+
+  console.log("price:", searchPrice);
+  console.log("shares:", numShares);
+  if (isNaN(numShares)) return;
+
+  const stock = portfolio.find((item) => item.symbol === searchSymbol);
+  if (stock) {
+    stock.shares = numShares;
+    console.log(
+      `Updated ${searchStockName} (${searchSymbol}) to ${numShares} shares.`,
+    );
+    console.log("UserPortfolio:", portfolio);
+  } else {
+    portfolio.push({
+      name: searchStockName,
+      symbol: searchSymbol,
+      shares: numShares,
+    });
+    console.log(
+      `Added ${searchStockName} (${searchSymbol}) with ${numShares} shares.`,
+    );
+    console.log("UserPortfolio:", portfolio);
+  }
+
+  localStorage.setItem("portfolio", JSON.stringify(portfolio));
+
+  //display saved shares for searched stocks, update displayed portfolio value
+  displayCurrentStockShares(searchSymbol, searchPrice, numShares);
+  displayPortfolioValue();
+}
+
+function addToWatchlist() {
+  
+  localStorage.setItem("watchlist", JSON.stringify(watchlist));
+}
+
+/*Displays current stock shares & prices in portfolio management*/
+function displayCurrentStockShares(symbol, price, numShares) {
+  const posVal = document.getElementById("position-val");
+  const holdings = document.getElementById("holdings");
+  price = validPrice(price);
+
+  if (numShares == null) {
+    const stock = portfolio.find((item) => item.symbol === symbol);
+    numShares = stock ? stock.shares : 0;
+  }
+
+  holdings.textContent = `${numShares} shares`;
+  const totalValue = numShares * price; // number
+  posVal.textContent = `$${totalValue.toFixed(2)}`; // rounded for UI
+}
+
+/*Calculates total portfolio value using global portfolio variable*/
+async function calcTotalPortfolio() {
+  let totalValue = 0;
+  for (const stock of portfolio) {
+    // placeholder price for now
+    console.log(stock.symbol);
+    const price = await getcurrentPrice(stock.symbol);
+
+    // skip invalid price
+    if (!price || isNaN(price)) {
+      console.warn("Skipping invalid price for", stock.symbol);
+      continue;
+    }
+
+    totalValue += Number(stock.shares) * price;
+  }
+
+  console.log("Total portfolio value:", totalValue);
+
+  return totalValue;
+}
+
+/*Gets current price of stock using symbol from API*/
+async function getcurrentPrice(symbol) {
+  try {
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
+    await delay(2000);
+    console.log("waiting in getCurrentPrice");
+    const data = await fetchURL(url);
+
+    //API-level erros: check if valid data came back from API response
+    handleAPIErrors(data, "Global Quote");
+    const price = data["Global Quote"]["05. price"];
+    console.log("Price set", price);
+    return price;
+  } catch (err) {
+    showToastError(err.message);
+    console.error(`Error in getcurrentPrice(${symbol}):`, err);
+  }
+}
+/*Displays portfolio current value in page header*/
+async function displayPortfolioValue() {
+  const portfolioValEl = document.querySelector("#header-portfolio-value");
+  const stockOwnedEl = document.querySelector("#header-stocks-owned");
+
+  const totalPortfolioVal = await calcTotalPortfolio();
+  const numStocks = portfolio.length;
+
+  portfolioValEl.textContent = `$${formatPrice(totalPortfolioVal)}`;
+  stockOwnedEl.textContent = numStocks;
+}
+
 /*-- HELPER FUNCTIONS --*/
+
+/*Makes searched stock info visible in active stock section */
+function showActiveResults() {
+  document.getElementById("active-stock-results").classList.remove("hidden");
+}
+
+/**
+ * Loads portfolio if set from localStorage to maintain persistence
+ */
+function loadPortfolio() {
+  const loadPortfolio = JSON.parse(localStorage.getItem("portfolio"));
+  if (loadPortfolio) portfolio = loadPortfolio;
+}
+
+/**
+ * Ensures any price is only a number val
+ */
+function validPrice(input) {
+  if (input == null) return 0; //Undefined or null case
+
+  input = String(input)
+    .trim()
+    .replace(/[^0-9.-]+/g, "");
+
+  return Number(input);
+}
+
+/**
+ * Ensures any text is only a cleaned up text val
+ */
+function validText(input) {
+  return input ? input.trim() : "";
+}
+
+/**
+ * Reformats price with commas and upto 2 decimal place
+ */
+function formatPrice(num) {
+  return num.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 /**
  * Combines stock data, with company name in order to maintain 1 set of data being passed through and reduces fragmented data due to data being
@@ -578,29 +786,33 @@ function resetSearchState() {
   console.log("Search state reset:", searchState);
 }
 
-/*Closes stock picker modal popup*/
+/**
+ * Closes stock picker modal popup
+ */
 function closeStockPicker() {
   picker_modal.classList.add("hidden");
 }
 
-/*Toggles loader to hide, should be used after API call*/
+/**
+ * Toggles loader to hide, should be used after API call
+ */
 function hideLoading() {
   // after fetch
   document.getElementById("loading").classList.replace("flex", "hidden");
 }
 
-/*Toggles loader to show, should be used before API call*/
+/**
+ * Toggles loader to show, should be used before API call
+ */
 function showLoading() {
   // show loading
   document.getElementById("loading").classList.replace("hidden", "flex");
   document.getElementById("active-stock-results").classList.add("hidden");
 }
 
-function showActiveResults() {
-  document.getElementById("active-stock-results").classList.remove("hidden");
-}
-
-/*Loading spin wheel to help improve UI/UX for user while API is being fetched*/
+/**
+ * Loading spin wheel to help improve UI/UX for user while API is being fetched
+ */
 function displaySearchLoading(searchTxt) {
   //const activeDiv = document.querySelector("#active-stock-section");
 
@@ -612,26 +824,28 @@ function displaySearchLoading(searchTxt) {
   document.querySelector("#loading_txt").textContent = `${searchTxt} ...`;
 }
 
-/*Enables buttons requiring API usage on webpage to regulate API calls. Re-enabled either on final API error or success*/
+/**
+ * Enables buttons requiring API usage on webpage to regulate API calls. Re-enabled either on final API error or success
+ */
 function enableButtons() {
   document
     .querySelectorAll("#search-section button")
     .forEach((b) => (b.disabled = false));
 }
 
-/**Disables buttons on web-page requiring API calls when API calls are going through*/
+/**
+ * Disables buttons on web-page requiring API calls when API calls are going through
+ */
 function disableButtons() {
   document
     .querySelectorAll("#search-section button")
     .forEach((b) => (b.disabled = true));
 }
 
-function format2Decimal(num) {
-  return parseFloat(num).toFixed(2);
-}
-
-/*Tracks API calls to ensure less than 6 calls are made in a minute, a delay is added and no new calls are added to
- * avoid API errors due to API rate limit set by Alphaadvantage*/
+/**
+ * Tracks API calls to ensure less than 6 calls are made in a minute, a delay is added and no new calls are added to
+ * avoid API errors due to API rate limit set by Alphaadvantage
+ */
 async function trackAPICalls() {
   const maxCallsPerMinute = 5;
   const perCallDelay = 1000; // 1 second between calls
@@ -667,12 +881,16 @@ async function trackAPICalls() {
   }
 }
 
-/*Adds delay, to create a pause in program execution. Used primarily on API calls to avoid rate limiting */
+/**
+ * Adds delay, to create a pause in program execution. Used primarily on API calls to avoid rate limiting
+ */
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/*Checks if company name matches any famous companies to improve ux for companies with different listed names*/
+/**
+ * Checks if company name matches any famous companies to improve ux for companies with different listed names
+ */
 function checkStockDictionary(symbol) {
   const stockAliases = {
     apple: "AAPL",
@@ -753,7 +971,9 @@ function checkStockDictionary(symbol) {
   }
 }
 
-/*Fetches data from API, while handling HTTP/Parsing errors*/
+/**
+ * Fetches data from API, while handling HTTP/Parsing errors
+ */
 async function fetchURL(url) {
   try {
     // Stop API call immediately if search is terminated
@@ -782,7 +1002,9 @@ async function fetchURL(url) {
   }
 }
 
-/*Throws errors for API level errors based on Alphaadvantage API responses*/
+/**
+ * Throws errors for API level errors based on Alphaadvantage API responses
+ */
 function handleAPIErrors(data, apiObj) {
   if (data["Error Message"]) {
     throw new APIError("Invalid API call");
@@ -797,7 +1019,9 @@ function handleAPIErrors(data, apiObj) {
   }
 }
 
-/*Displays errors to users above search bar*/
+/**
+ * Displays errors to users above search bar
+ */
 function displayError(err) {
   console.error(err);
   if (err instanceof TypeError) {
@@ -813,10 +1037,25 @@ function displayError(err) {
 
 /* EVENT Listeners:  for search and related user actions*/
 document.addEventListener("DOMContentLoaded", function () {
-  //Event Listerns on Search Bar
-  search_form.addEventListener("submit", handleSearchForm);
+  //Loading Portfolio Data & Displaying it on UI
+  loadPortfolio();
+  //displayPortfolioValue();
 
+  //Event Listener for background API issues error msg pop up
+  closeToastBtn.addEventListener("click", hideToast);
+
+  //Event Listener on Search Bar
+  search_form.addEventListener("submit", handleSearchForm);
   qs_btns.addEventListener("click", handleQuickSearch);
+  watchlistBtn.addEventListener("click", addToWatchlist);
+
+  // Save shares in Portfolio Management on button click or 'enter' key
+  updateSharesBtn.addEventListener("click", handleShares);
+  inputShares.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      handleShares();
+    }
+  });
 });
 
 console.log("Page is Working");

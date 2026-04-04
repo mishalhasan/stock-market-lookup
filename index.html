@@ -29,14 +29,16 @@
           <div class="grid text-center">
             <span class="text-sm text-blue-200">Portfolio Value</span>
             <span class="font-bold text-xl" id="header-portfolio-value">
-              $2,962.20
+              Loading..
             </span>
           </div>
 
           <!-- Stocks Owned -->
           <div class="grid text-center">
             <span class="text-sm text-blue-200">Stocks Owned</span>
-            <span class="font-bold text-xl" id="header-stocks-owned"> 1 </span>
+            <span class="font-bold text-xl" id="header-stocks-owned"
+              >Loading..</span
+            >
           </div>
         </div>
       </div>
@@ -129,11 +131,14 @@
                 <h2
                   class="text-3xl font-extrabold text-gray-900"
                   id="active-name"
-                ></h2>
+                >
+                  Apple
+                </h2>
                 <span
                   class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase mt-2 inline-block"
                   id="active-symbol"
-                ></span>
+                  >AAPL</span
+                >
               </div>
               <button
                 id="btn-add-watchlist"
@@ -152,8 +157,12 @@
                   <h3
                     class="text-6xl font-black text-gray-900 tracking-tight"
                     id="active-price"
-                  ></h3>
-                  <p class="font-bold text-lg mt-2" id="active-change"></p>
+                  >
+                    $262.04
+                  </h3>
+                  <p class="font-bold text-lg mt-2" id="active-change">
+                    +$1.75 (+0.67%)
+                  </p>
                 </div>
 
                 <div
@@ -166,10 +175,8 @@
                       class="text-gray-500 text-sm uppercase font-bold tracking-wider"
                       >Open</span
                     >
-                    <span
-                      id="open-amount"
-                      class="font-extrabold text-gray-900"
-                    ></span>
+                    <span id="open-amount" class="font-extrabold text-gray-900">
+                    </span>
                   </div>
                   <div
                     class="flex justify-between items-center gap-4 border-b border-gray-200 pb-2"
@@ -190,10 +197,8 @@
                       class="text-gray-500 text-sm uppercase font-bold tracking-wider"
                       >Low</span
                     >
-                    <span
-                      id="low-amount"
-                      class="font-extrabold text-gray-900"
-                    ></span>
+                    <span id="low-amount" class="font-extrabold text-gray-900">
+                    </span>
                   </div>
                   <div class="flex justify-between items-center gap-4 pt-2">
                     <span
@@ -242,9 +247,10 @@
                     <span class="text-gray-500 font-semibold"
                       >Current Holdings:</span
                     >
-                    <span class="text-gray-900 font-black text-base sm:text-xl"
-                      >10 shares</span
-                    >
+                    <span
+                      id="holdings"
+                      class="text-gray-900 font-black text-base sm:text-xl"
+                    ></span>
                   </div>
 
                   <div
@@ -253,9 +259,10 @@
                     <span class="text-gray-500 font-semibold"
                       >Position Value:</span
                     >
-                    <span class="text-gray-900 font-black text-base sm:text-xl"
-                      >$1114.20</span
-                    >
+                    <span
+                      id="position-val"
+                      class="text-gray-900 font-black text-base sm:text-xl"
+                    ></span>
                   </div>
                 </div>
               </div>
@@ -393,5 +400,32 @@
         </div>
       </div>
     </section>
+
+    <div
+      id="toast-container"
+      class="fixed top-5 right-5 z-[100] hidden transform transition-all duration-300 translate-y-[-20px] opacity-0"
+    >
+      <div
+        class="bg-red-50 border-l-4 border-red-500 shadow-xl rounded-md p-4 flex items-center gap-4 min-w-[300px] max-w-md"
+      >
+        <div class="shrink-0 text-red-500 text-xl">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+
+        <div class="flex-grow">
+          <h4 class="text-sm font-bold text-red-800">Update Failed</h4>
+          <p id="toast-message" class="text-xs text-red-600 mt-0.5">
+            Could not fetch the latest price.
+          </p>
+        </div>
+
+        <button
+          id="close-toast"
+          class="text-red-400 hover:text-red-700 transition-colors focus:outline-none p-1"
+        >
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
   </body>
 </html>
