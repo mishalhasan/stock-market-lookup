@@ -122,7 +122,7 @@
           </div>
           <article
             id="active-stock-results"
-            class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
           >
             <div
               class="p-6 flex justify-between items-start bg-blue-50/30 border-b border-gray-100"
@@ -286,10 +286,10 @@
 
         <div
           id="watchlist-empty"
-          class="hidden bg-white border-2 border-dashed border-gray-300 rounded-xl p-16 text-center"
+          class="bg-white border-2 border-dashed border-gray-300 rounded-xl p-16 text-center"
         >
           <div class="text-gray-300 text-6xl mb-4">
-            <i class="fa-solid fa-chart-simple"></i>
+            <i class="fa fa-line-chart"></i>
           </div>
           <p class="text-gray-600 font-bold text-xl mb-1">
             Your watchlist is empty
@@ -318,12 +318,27 @@
               $262.04
             </div>
 
-            <div class="flex-1 text-center w-full md:w-auto">
+            <div
+              class="flex flex-col items-center justify-center w-full md:w-auto gap-0.5"
+            >
               <span
-                class="text-green-500 font-bold bg-green-50 px-3 py-1 rounded-full text-sm"
+                class="text-green-500 font-bold bg-green-50 rounded-full px-1 py-1  text-sm"
+              >
+                +$1.75
+              </span>
+              <span
+                class="text-green-500 font-bold bg-green-50 rounded-full px-1 py-1  text-sm"
+              >
+                (+0.67%)
+              </span>
+            </div>
+
+            <!-- <div class="flex-1 text-center w-full md:w-auto"> 
+              <span
+                class="text-green-500 text-center font-bold bg-green-50 px-3 py-1 rounded-full text-sm"
                 >+$1.75 (+0.67%)</span
               >
-            </div>
+            </div> -->
 
             <div
               class="flex-1 text-center text-gray-500 font-semibold w-full md:w-auto"
@@ -339,16 +354,11 @@
 
             <div class="flex gap-3 justify-end w-full md:w-auto">
               <button
-                class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors flex items-center justify-center shadow-sm"
-                title="View Details"
-              >
-                <i class="fa-solid fa-magnifying-glass"></i>
-              </button>
-              <button
-                class="w-10 h-10 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center shadow-sm"
+                class="bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center gap-2 px-3 py-2 shadow-sm"
                 title="Remove from Watchlist"
               >
                 <i class="fa-solid fa-trash-can"></i>
+                Remove
               </button>
             </div>
           </article>

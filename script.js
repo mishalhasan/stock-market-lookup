@@ -607,11 +607,194 @@ function handleShares() {
   //display saved shares for searched stocks, update displayed portfolio value
   displayCurrentStockShares(searchSymbol, searchPrice, numShares);
   displayPortfolioValue();
+
+  //ensure watchlist is updated with new shares added & displayed
+  handleWatchlist();
+}
+
+function getShares(symbol) {
+  const stock = portfolio.find((item) => item.symbol === symbol);
+
+  if (!stock) return 0;
+  return Number(stock.shares) || 0;
+
+  // if (stock) return stock.shares;
+  // console.log("In get shares", stock);
+  // console.log(stock.shares);
+  // return 0;
+  // return stock ? stock.shares : 0;
+}
+
+function handleWatchlist() {
+  console.log("in Handle Watchlist", watchlist);
+  addToWatchlist();
+  displayWatchlist();
 }
 
 function addToWatchlist() {
-  
+  console.log("working in watchlist");
+  //Cleaning formatting for data grabbed from page
+  const watchlistStockName = validText(stockName.textContent);
+  const watchlistSymbol = validText(stockSymbol.textContent);
+  const watchlistPrice = validPrice(stockPrice.textContent);
+  const watchlistStockChange = validText(stockChange.textContent);
+  const numShares = Number(getShares(watchlistSymbol));
+
+  // value= `$${validPrice(watchlistPrice) * numShares}`,
+
+  const stock = watchlist.find((item) => item.symbol === watchlistSymbol);
+
+  //Add new stock to watchlist, but if stock exists updates existing watchlist data
+  if (stock) {
+    stock.change = watchlistStockChange;
+    stock.price = watchlistPrice;
+    stock.shares = numShares;
+    console.log(`Updated ${watchlistStockName} (${watchlistSymbol})`);
+    console.log("Watchlist:", watchlist);
+  } else {
+    watchlist.push({
+      name: watchlistStockName,
+      symbol: watchlistSymbol,
+      price: watchlistPrice,
+      shares: numShares,
+      change: watchlistStockChange,
+    });
+    console.log(
+      `Added ${watchlistStockName} (${watchlistSymbol}) with ${numShares} shares.`,
+    );
+    console.log("Watchlist:", watchlist);
+  }
+
   localStorage.setItem("watchlist", JSON.stringify(watchlist));
+}
+
+function displayWatchlist() {
+  console.log("displayWacthlist");
+
+  //Ensure watchlist is not empty
+  if (watchlist.length === 0) return;
+
+  //Make appropriate empty watchlist sub-section invisible
+  const emptyWatclist = document.getElementById("watchlist-empty");
+  emptyWatclist.classList.add("hidden");
+
+  //  const watchlistPopulated = document.getElementById("watchlist-populated");
+  // watchlistPopulated.classList.remove("hidden");
+
+  //Clear render of any previous populated container
+  const populatedContainer = document.getElementById("watchlist-populated");
+  populatedContainer.innerHTML = "";
+
+  //Loop through global watchlist array and create each row to be appended to container
+  for (const stock of watchlist) {
+    const rowWatchlist = createWatchlistRow(stock);
+    populatedContainer.appendChild(rowWatchlist);
+  }
+}
+
+function splitChangeString(changeStr) {
+  // Find the index of the space right before the '('
+  const index = changeStr.lastIndexOf(" (");
+  if (index === -1) {
+    // fallback if format is unexpected
+    return { changePrice: changeStr, changePercent: "" };
+  }
+  const changePrice = changeStr.slice(0, index).trim(); // "+$1.75" or "-$0.50"
+  const changePercent = changeStr.slice(index).trim(); // "(+0.67%)" or "(-0.20%)"
+  return { changePrice, changePercent };
+}
+
+function createWatchlistRow(stock) {
+  console.log("row in createwatchlist", stock.name);
+
+  //create article el as fixed point for populating
+  const article = document.createElement("article");
+  article.className =
+    "bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:shadow-md";
+
+  //Calculate position value for each stock, fallback conversion
+  const posValue = validPrice(stock.price) * Number(stock.shares);
+
+  //Split stock change string and determine css for change value
+  const { changePrice, changePercent } = splitChangeString(stock.change);
+  const changeSign = stock.change[0];
+  const colorClass =
+    changeSign === "+"
+      ? "text-green-500 bg-green-50"
+      : "text-red-500 bg-red-50";
+
+  article.innerHTML = `
+  <div class="flex-1 w-full md:w-auto">
+    <h4 class="font-bold text-gray-900 text-lg">${stock.name}</h4>
+    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">
+      ${stock.symbol}
+    </p>
+  </div>
+
+  <div class="flex-1 text-center font-black text-2xl text-gray-900 w-full md:w-auto">
+    $${stock.price}
+  </div>
+
+  <div class="flex flex-col items-center justify-center w-full md:w-auto gap-0.5">
+    <span class="${colorClass} font-bold rounded-full px-1 py-1 text-sm">
+      ${changePrice}
+    </span>
+    <span class="${colorClass} font-bold rounded-full px-1 py-1 text-sm">
+      ${changePercent}
+    </span>
+  </div>
+
+  <div class="flex-1 text-center text-gray-500 font-semibold w-full md:w-auto">
+    ${stock.shares} shares
+  </div>
+
+  <div class="flex-1 text-center font-bold text-xl text-gray-900 w-full md:w-auto">
+    $${posValue}
+  </div>
+
+  <div class="flex gap-3 justify-end w-full md:w-auto">
+    <button
+      class="bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center gap-2 px-3 py-2 shadow-sm"
+      title="Remove from Watchlist"
+    >
+      <i class="fa-solid fa-trash-can"></i>
+      Remove
+    </button>
+  </div>
+`;
+
+  const delete_btn = article.querySelector(".delete-btn");
+
+  return article;
+
+  //  <div
+  //         class="flex flex-col items-center justify-center ${colorClass}"
+  //         >
+  //            <span
+  //            class="font-bold bg-green-50 px-3 py-1 rounded-full text-sm
+  //            >
+  //            ${changePrice}
+  //           </span>
+  //            <span
+  //            class="font-bold bg-green-50 px-3 py-1 rounded-full text-sm"
+  //            >
+  //            ${changePercent}
+  //            </span>
+  //         </div>
+  // <div class="flex gap-3 justify-end w-full md:w-auto">
+  //   <button
+  //     class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors flex items-center justify-center shadow-sm"
+  //     title="View Details"
+  //   >
+  //     <i class="fa-solid fa-magnifying-glass"></i>
+  //   </button>
+  //   <button
+  //     class="delete-btn w-10 h-10 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center shadow-sm"
+  //     title="Remove from Watchlist"
+  //   >
+  //     <i class="fa-solid fa-trash-can"></i>
+  //   </button>
+  // </div>;
 }
 
 /*Displays current stock shares & prices in portfolio management*/
@@ -621,8 +804,10 @@ function displayCurrentStockShares(symbol, price, numShares) {
   price = validPrice(price);
 
   if (numShares == null) {
-    const stock = portfolio.find((item) => item.symbol === symbol);
-    numShares = stock ? stock.shares : 0;
+    // const stock = portfolio.find((item) => item.symbol === symbol);
+    // numShares = stock ? stock.shares : 0;
+    // test
+    numShares = getShares(symbol);
   }
 
   holdings.textContent = `${numShares} shares`;
@@ -632,14 +817,16 @@ function displayCurrentStockShares(symbol, price, numShares) {
 
 /*Calculates total portfolio value using global portfolio variable*/
 async function calcTotalPortfolio() {
+  //if portfolio empty
+  if (portfolio.length === 0) return 0;
+
   let totalValue = 0;
   for (const stock of portfolio) {
-    // placeholder price for now
     console.log(stock.symbol);
     const price = await getcurrentPrice(stock.symbol);
 
     // skip invalid price
-    if (!price || isNaN(price)) {
+    if (isNaN(price)) {
       console.warn("Skipping invalid price for", stock.symbol);
       continue;
     }
@@ -652,7 +839,7 @@ async function calcTotalPortfolio() {
   return totalValue;
 }
 
-/*Gets current price of stock using symbol from API*/
+/*Gets current price of stock using symbol from API, if no price, returns 0*/
 async function getcurrentPrice(symbol) {
   try {
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
@@ -664,7 +851,7 @@ async function getcurrentPrice(symbol) {
     handleAPIErrors(data, "Global Quote");
     const price = data["Global Quote"]["05. price"];
     console.log("Price set", price);
-    return price;
+    return validPrice(price);
   } catch (err) {
     showToastError(err.message);
     console.error(`Error in getcurrentPrice(${symbol}):`, err);
@@ -696,18 +883,31 @@ function loadPortfolio() {
   const loadPortfolio = JSON.parse(localStorage.getItem("portfolio"));
   if (loadPortfolio) portfolio = loadPortfolio;
 }
+function loadWatchlist() {
+  const loadWatchlist = JSON.parse(localStorage.getItem("watchlist"));
+  if (loadWatchlist) watchlist = loadWatchlist;
+}
+function loadData() {
+  const storedPortfolio = JSON.parse(localStorage.getItem("portfolio"));
+  const storedWatchlist = JSON.parse(localStorage.getItem("watchlist"));
+
+  if (storedPortfolio) portfolio = storedPortfolio;
+  if (storedWatchlist) watchlist = storedWatchlist;
+}
 
 /**
  * Ensures any price is only a number val
  */
 function validPrice(input) {
-  if (input == null) return 0; //Undefined or null case
+  if (input === null || input === undefined) return NaN;
 
-  input = String(input)
+  const cleaned = String(input)
     .trim()
     .replace(/[^0-9.-]+/g, "");
 
-  return Number(input);
+  const num = Number(cleaned);
+
+  return isNaN(num) ? NaN : num;
 }
 
 /**
@@ -1040,6 +1240,8 @@ document.addEventListener("DOMContentLoaded", function () {
   //Loading Portfolio Data & Displaying it on UI
   loadPortfolio();
   //displayPortfolioValue();
+  console.log(portfolio);
+  //loadData();
 
   //Event Listener for background API issues error msg pop up
   closeToastBtn.addEventListener("click", hideToast);
@@ -1047,7 +1249,7 @@ document.addEventListener("DOMContentLoaded", function () {
   //Event Listener on Search Bar
   search_form.addEventListener("submit", handleSearchForm);
   qs_btns.addEventListener("click", handleQuickSearch);
-  watchlistBtn.addEventListener("click", addToWatchlist);
+  watchlistBtn.addEventListener("click", handleWatchlist);
 
   // Save shares in Portfolio Management on button click or 'enter' key
   updateSharesBtn.addEventListener("click", handleShares);
