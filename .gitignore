@@ -1,1 +1,7 @@
+# Ignore configuration files
 config.js
+failedRefactor.js
+tailwind.config.js
+
+# Ignore Markdown documentation if needed
+issues.md

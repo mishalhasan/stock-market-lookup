@@ -1,14 +1,9 @@
 /*----  Global Variables ----*/
-//import { API_KEY } from "./config.js";
-const API_KEY = "YOUR_API_KEY";
-const API_KEY2 = "DEMO";
+import { API_KEY } from "./config.js";
 let watchlist = [];
 let portfolio = [];
 let pickerCache = {};
 const cache = {}; //global cache
-let APIcount = 0; // Number of calls made in the current window
-let windowStart = null; // Start time of the current 1-minute window
-//let lastCallTime = 0; // Timestamp of the last API call
 
 /*---- Search State ----*/
 
@@ -67,50 +62,12 @@ class DataNotFoundError extends Error {
   }
 }
 
-/*---- EVENT HANDLER FUNCTIONS ----*/
+/*---- EVENT HANDLER SEARCH FUNCTIONS ----*/
 
 /**
- * Shows a toast error message to the user for API/background issues.
- * Uses a small setTimeout to ensure CSS transitions trigger smoothly, since JS
- * executes immediately and may otherwise skip transition effects.
+ * Submits form through any quick search button
  */
-function showToastError(message) {
-  //Set custom error msg, show to user
-  toastMessage.textContent = message;
-  toastContainer.classList.remove("hidden");
-
-  // Small delay to allow the CSS transition to trigger smoothly but quick enough for no user lag
-  setTimeout(() => {
-    toastContainer.classList.remove("translate-y-[-20px]", "opacity-0");
-    toastContainer.classList.add("translate-y-0", "opacity-100");
-  }, 10);
-
-  // Reset any existing timer, then auto-hide after 5 seconds
-  clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => hideToast(), 5000);
-}
-
-/**
- * Hides the toast error message with a slide/fade effect.
- * Uses setTimeout to wait for the Tailwind transition duration (300ms) before fully
- * hiding the element.
- */
-function hideToast() {
-  // Slide it back up and fade it out
-  toastContainer.classList.remove("translate-y-0", "opacity-100");
-  toastContainer.classList.add("translate-y-[-20px]", "opacity-0");
-
-  // Wait for the CSS transition (300ms) to finish before actually hiding it
-  setTimeout(() => {
-    toastContainer.classList.add("hidden");
-  }, 300);
-}
-
-/*Submits form through any quick search button*/
 function handleQuickSearch(event) {
-  // console.log("button is clicked");
-  console.log(event.target.value);
-  console.log(event.target.closest(".quick-search-btn"));
   const quickSearchButton = event.target;
 
   //Ensure only buttons on event delegation, lead to API call
@@ -123,9 +80,12 @@ function handleQuickSearch(event) {
   search_input.value = "";
 }
 
-/* Validates user input and sends user input to be sent to the API. Usees a waterfall approach, to find whether user inputs symbol or company name was sent by user. 
-   Global quote API limited to symbol, must seperately find company name, thus first check stock aliases dictionary, then searches global quote assuming SYMBOL. 
-   If search fails assumes companyname, calls getBestMatch.*/
+/**
+ * Main search handler. Uses a waterfall approach to resolve input:
+ * 1. Checks local dictionary for common aliases (e.g., 'Apple' -> 'AAPL').
+ * 2. Attempts direct Global Quote API fetch (assumes input is a symbol).
+ * 3. Falls back to Best Match API if direct fetch fails (assumes input is a company name).
+ */
 
 async function handleSearchForm(event) {
   event.preventDefault();
@@ -136,8 +96,6 @@ async function handleSearchForm(event) {
   updateSearchState({ stage: "userInput", status: "pending" });
 
   let input = search_input.value.trim();
-
-  console.log("handleSearchForm Button clicked");
 
   try {
     // Input validation
@@ -167,8 +125,6 @@ async function handleSearchForm(event) {
       updateSearchState({ status: "success", terminate: true });
       return;
     }
-    console.log("still running after return");
-    console.log("waiting in handleSearchForm before actual getBestMatch call");
 
     // If not found, try best match
     await delay(2000); // API rate limit
@@ -179,8 +135,6 @@ async function handleSearchForm(event) {
       throw new DataNotFoundError(`No matching stock found for "${input}"`);
     }
 
-    console.log("BestMatch contents", bestMatch);
-
     if (bestMatch.length === 1) {
       const { symbol, name } = bestMatch[0];
 
@@ -189,14 +143,12 @@ async function handleSearchForm(event) {
         displaySearchLoading(`Searching for ${symbol} stock`);
 
         let stockData = await getStockData(symbol);
-        console.log("stockData before", stockData);
         //getStockData is a soft fail for error type DataNotFoundError, so must throw explicit error here
         if (!stockData) {
           throw new DataNotFoundError(`No stock data found for ${symbol}`);
         }
         stockData = combineStockInfo(stockData, name);
-        console.log("stockData after if+combine", stockData);
-        //cache[stockData.symbol] = stockData;
+        cache[stockData.symbol] = stockData;
         displayActiveStockData(stockData);
         updateSearchState({ status: "success", terminate: true });
       }
@@ -227,7 +179,6 @@ async function handleSearchForm(event) {
             resolve(null);
           }
 
-          console.log("reached inside promise");
           picker_results.addEventListener("click", stockPickerHandler);
           picker_close_btn.addEventListener("click", closePickerHandler);
         });
@@ -235,11 +186,11 @@ async function handleSearchForm(event) {
         closeStockPicker();
 
         if (pickedStock === null) {
-          console.log("user exited picker");
           return;
         }
 
         displaySearchLoading(`Loading ${pickerCache[pickedStock]}`);
+
         // Grab stock info from stockpicker cache based on user selection & update UI
         displayActiveStockData(pickerCache[pickedStock]);
         //cache[allStockData.symbol] = allStockData;
@@ -248,7 +199,6 @@ async function handleSearchForm(event) {
       }
     }
   } catch (err) {
-    //console.error(err);
     updateSearchState({ status: "fail", lastError: err, terminate: true });
     search_error.textContent = err.message;
   } finally {
@@ -260,13 +210,15 @@ async function handleSearchForm(event) {
 
 /*--- HANDLE SEARCH FUNCTIONS ---*/
 
+/**
+ * Fetches quote data for a specific symbol.
+ * Note: Returns null instead of throwing DataNotFoundError to allow fallback searches.
+ */
 async function getStockData(symbol) {
   try {
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
     await delay(2000);
-    console.log("waiting in getStockData");
     const data = await fetchURL(url);
-    console.log("in getStockData f(x)", data);
 
     //API-level erros: check if valid data came back from API response
     handleAPIErrors(data, "Global Quote");
@@ -282,8 +234,6 @@ async function getStockData(symbol) {
 
     return stockData;
   } catch (err) {
-    //displayError(err);
-
     if (err instanceof DataNotFoundError) {
       console.warn("Stock not found for symbol:", symbol);
       return null; //  SOFT FAIL → allow fallback
@@ -294,8 +244,10 @@ async function getStockData(symbol) {
   }
 }
 
-/* Gets stock company name based on stock symbol from API. Used in displayFunction primarily for instances where symbol searched 
-as global quote does not provide company name */
+/**
+ * Fetches the official company name for a symbol.
+ * Required because the Global Quote endpoint only returns the ticker symbol.
+ */
 async function getCompanyName(symbol) {
   try {
     // Stop early if search terminated
@@ -303,35 +255,32 @@ async function getCompanyName(symbol) {
 
     const url = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${symbol}&apikey=${API_KEY}`;
     await delay(2000);
-    console.log("waiting in getCompany");
     const data = await fetchURL(url);
     handleAPIErrors(data, "bestMatches");
-    console.log(data);
     const company = data["bestMatches"][0]["2. name"];
-    console.log(company);
     return company;
   } catch (err) {
-    //displayError(err);
     console.error(`Error in getCompanyName(${symbol}):`, err);
     throw err;
   }
 }
 
+/**
+ * Fetches all relevant stock data for a given symbol.
+ * Combines API data with cached company information.
+ * Throws an error if stock data or company info cannot be retrieved.
+ */
 async function getAllStockData(symbol) {
   try {
     if (searchState.terminate) return;
 
-    //trackAPICalls();
     const stockData = await getStockData(symbol);
 
     if (!stockData || Object.keys(stockData).length === 0) {
-      //throw new DataNotFoundError(`No stock data found for ${symbol}`);
-      console.log("I am in getAllStockData");
       return null;
     }
-    console.log("Should not run if no stock data in getALLSTOCKDATA");
 
-    // Get company name from cache or API
+    // Get company name from cache if available; otherwise, fetch from API
     let compName = cache[stockData.symbol]?.name;
     if (!compName) {
       compName = await getCompanyName(stockData.symbol);
@@ -350,23 +299,19 @@ async function getAllStockData(symbol) {
   }
 }
 
-function addToCache(allStockData) {
-  //Saves copy into cache
-  cache[allStockData.symbol] = allStockData;
-}
-
-/*Calls API to list bestmatches for user to choose US equities based on user input and returns best symbol.
- If only one symbol found, skips stock picker, and returns symbol. Otherwise stock picker displays*/
+/**
+ * Fetches potential stock matches for a given query, filtering for US Equities.
+ * Returns a single object if an exact match is found, or an array of options for the picker modal.
+ */
 async function getBestMatch(input) {
   try {
     const url = `https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=${input}&apikey=${API_KEY}`;
-    console.log("waiting in getSymbol first call");
     await delay(2000);
 
     const data = await fetchURL(url);
     handleAPIErrors(data, "bestMatches");
-    console.log(data);
-    // Filter for US equities
+
+    // Filter for US equities to reduce API rate limit issue
     const usEquities = data.bestMatches.filter((match) => {
       return (
         match["3. type"].toLowerCase() === "equity" &&
@@ -374,12 +319,8 @@ async function getBestMatch(input) {
       );
     });
 
-    console.log("UsEQUITIEs", usEquities);
-
     //If no matches, return error
     if (!usEquities || usEquities.length === 0) {
-      //last_error = "No data found";
-      //return null;
       throw new DataNotFoundError("No matching results found");
     }
 
@@ -401,7 +342,9 @@ async function getBestMatch(input) {
   }
 }
 
-/*Gets all the stock picker data needed from SYMBOL_SEARCH endpoint and formats it. Also adds data to cache to reduce API calls*/
+/**
+ * Gets all the stock picker data needed from SYMBOL_SEARCH endpoint and formats it. Also adds data to cache to reduce API calls
+ */
 async function getAllStocksPickerData(compData) {
   try {
     pickerCache = {};
@@ -412,7 +355,6 @@ async function getAllStocksPickerData(compData) {
 
       await delay(3000);
       const stockData = await getStockData(symbol);
-      //setStockCache(stockData);
 
       const fullStockData = {
         symbol,
@@ -429,19 +371,18 @@ async function getAllStocksPickerData(compData) {
       pickerCache[symbol] = fullStockData;
     }
 
-    console.log(pickerCache);
     return Object.values(pickerCache);
-    //return pickerData;
   } catch (err) {
-    console.error("Something went wrong fetching data from stocks picker list");
     console.error(`Error in getAllStocksPickerData:`, err);
-
-    //displayError();
     throw err;
   }
 }
 
-/*Takes in stocks data from SYMBOL_SEARCH to be displayed in picker modal.  */
+/*--- DISPLAY SEARCH FUNCTIONS ---*/
+
+/**
+ * Takes in stocks data from SYMBOL_SEARCH to be displayed in picker modal.
+ */
 async function displayStockPicker(pickerStocks) {
   let textHTML = "";
 
@@ -505,6 +446,10 @@ async function displayStockPicker(pickerStocks) {
   picker_modal.classList.remove("hidden");
 }
 
+/**
+ * Updates the UI with the active stock's data.
+ * Handles numeric parsing, formatting, and visual styling based on stock performance.
+ */
 function displayActiveStockData(stockData) {
   if (!stockData || !stockData.symbol) {
     console.warn("Skipping invalid stock data:", stockData);
@@ -517,25 +462,14 @@ function displayActiveStockData(stockData) {
   const lowVal = document.querySelector("#low-amount");
   const volVal = document.querySelector("#volume-amount");
 
-  //Get company name, use cache if available, add to cache if unavailable
-  /*let compName = compNameCache[stockData.symbol];
-  if (!compName) {
-    compName = await getCompanyName(stockData.symbol);
-    compNameCache[stockData.symbol] = compName;
-  }*/
-
   //Ensure search article is visible (fallback)
   activeDiv.classList.remove("hidden");
   stockResults.classList.remove("hidden");
-
-  console.log("In displayActive", stockData);
-  console.log("Name:", stockData.name);
 
   //stockName.textContent = compName;
   stockName.textContent = stockData.name;
   stockSymbol.textContent = stockData.symbol;
 
-  // Parse all numeric values once
   const priceNum = parseFloat(stockData.price);
   const changeNum = parseFloat(stockData.change);
   const changePercentNum = parseFloat(stockData["change percent"]);
@@ -544,7 +478,6 @@ function displayActiveStockData(stockData) {
   const lowNum = parseFloat(stockData.low);
   const volumeNum = parseInt(stockData.volume, 10); // volume is always integer
 
-  // Display stock values
   stockPrice.textContent = `$${priceNum.toFixed(2)}`;
   openVal.textContent = `$${openNum.toFixed(2)}`;
   highVal.textContent = `$${highNum.toFixed(2)}`;
@@ -563,7 +496,7 @@ function displayActiveStockData(stockData) {
     stockChange.textContent = `${sign}$${changeNum.toFixed(2)} (+${changePercentNum.toFixed(2)}%)`;
   }
 
-  //display saved shares for searched stocks
+  // Display any saved shares for the stock
   displayCurrentStockShares(stockData.symbol, priceNum);
 
   hideLoading();
@@ -577,33 +510,26 @@ function displayActiveStockData(stockData) {
  * Updates the UI with current stock holdings, total portfolio value, and ensures the watchlist reflects changes.
  */
 function handleShares() {
-  console.log(inputShares.value);
   const numShares = Number(inputShares.value);
   const searchStockName = validText(stockName.textContent);
   const searchSymbol = validText(stockSymbol.textContent);
   const searchPrice = validPrice(stockPrice.textContent);
 
-  console.log("price:", searchPrice);
-  console.log("shares:", numShares);
   if (isNaN(numShares)) return;
 
   const stock = portfolio.find((item) => item.symbol === searchSymbol);
+
+  //Update portfolio price if stock exists, or else add to portfolio
   if (stock) {
     stock.shares = numShares;
-    console.log(
-      `Updated ${searchStockName} (${searchSymbol}) to ${numShares} shares.`,
-    );
-    console.log("UserPortfolio:", portfolio);
+    stock.lastPrice = searchPrice;
   } else {
     portfolio.push({
       name: searchStockName,
       symbol: searchSymbol,
       shares: numShares,
+      lastPrice: searchPrice,
     });
-    console.log(
-      `Added ${searchStockName} (${searchSymbol}) with ${numShares} shares.`,
-    );
-    console.log("UserPortfolio:", portfolio);
   }
 
   localStorage.setItem("portfolio", JSON.stringify(portfolio));
@@ -612,8 +538,12 @@ function handleShares() {
   displayCurrentStockShares(searchSymbol, searchPrice, numShares);
   displayPortfolioValue();
 
-  //ensure watchlist is updated with new shares added & displayed
-  handleWatchlist();
+  //Update watchlist if stock exists in watchlist
+  const watchlistStock = watchlist.find((item) => item.symbol === searchSymbol);
+  if (watchlistStock) handleWatchlist();
+
+  //Clear input field
+  inputShares.value = "";
 }
 
 /*
@@ -627,9 +557,6 @@ function displayCurrentStockShares(symbol, price, numShares) {
   price = validPrice(price);
 
   if (numShares == null) {
-    // const stock = portfolio.find((item) => item.symbol === symbol);
-    // numShares = stock ? stock.shares : 0;
-    // test
     numShares = getShares(symbol);
   }
 
@@ -639,29 +566,16 @@ function displayCurrentStockShares(symbol, price, numShares) {
 }
 
 /*
- * Calculates the total value of all stocks in the global portfolio array.
- * Fetches current prices for each stock, skips invalid prices, and returns the summed total.
+ * Calculates total portfolio value using the ALREADY SAVED data in the portfolio array.
+ * Never fetches data from the API.
  */
-async function calcTotalPortfolio() {
-  //if portfolio empty
+function calcTotalPortfolio() {
   if (portfolio.length === 0) return 0;
 
   let totalValue = 0;
   for (const stock of portfolio) {
-    console.log(stock.symbol);
-    const price = await getcurrentPrice(stock.symbol);
-
-    // skip invalid price
-    if (isNaN(price)) {
-      console.warn("Skipping invalid price for", stock.symbol);
-      continue;
-    }
-
-    totalValue += Number(stock.shares) * price;
+    totalValue += Number(stock.shares) * validPrice(stock.lastPrice);
   }
-
-  console.log("Total portfolio value:", totalValue);
-
   return totalValue;
 }
 
@@ -669,32 +583,46 @@ async function calcTotalPortfolio() {
  * Fetches the current stock price for a given symbol from the API.
  * Returns 0 if no price is found and displays an error message on failure.
  */
-async function getcurrentPrice(symbol) {
+async function getcurrentPrice(symbol, showError = true) {
   try {
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
     await delay(2000);
-    console.log("waiting in getCurrentPrice");
     const data = await fetchURL(url);
 
     //API-level erros: check if valid data came back from API response
-    handleAPIErrors(data, "Global Quote");
+
+    // Soft fail for rate limits
+    if (data.Note || data.Information) {
+      console.warn(`Rate limit hit for ${symbol}`);
+      return null;
+    }
+
+    // Soft fail for bad symbols
+    if (
+      !data["Global Quote"] ||
+      Object.keys(data["Global Quote"]).length === 0
+    ) {
+      console.warn(`No quote data for ${symbol}`);
+      return null;
+    }
     const price = data["Global Quote"]["05. price"];
-    console.log("Price set", price);
+
     return validPrice(price);
   } catch (err) {
-    showToastError(err.message);
+    if (showError) showToastError(err.message);
     console.error(`Error in getcurrentPrice(${symbol}):`, err);
+    return null; //always return null on failure
   }
 }
 
 /*
  * Updates the page header to show the total portfolio value and number of stocks owned.
  */
-async function displayPortfolioValue() {
+function displayPortfolioValue() {
   const portfolioValEl = document.querySelector("#header-portfolio-value");
   const stockOwnedEl = document.querySelector("#header-stocks-owned");
 
-  const totalPortfolioVal = await calcTotalPortfolio();
+  const totalPortfolioVal = calcTotalPortfolio();
   const numStocks = portfolio.length;
 
   portfolioValEl.textContent = `$${formatPrice(totalPortfolioVal)}`;
@@ -707,9 +635,74 @@ async function displayPortfolioValue() {
  * Refreshes the watchlist by adding the current stock and re-rendering the watchlist section.
  */
 function handleWatchlist() {
-  console.log("in Handle Watchlist", watchlist);
   addToWatchlist();
   displayWatchlist();
+}
+
+/*
+ * Triggered by the "Refresh Prices" button.
+ * Disables the button during the update to prevent multiple clicks,
+ * then calls syncAllPrices() to update prices for both portfolio and watchlist,
+ * respecting API limits and handling errors gracefully.
+ */
+async function handleRefresh(event) {
+  // Prevent multiple clicks
+  const btn = event.currentTarget;
+  btn.disabled = true;
+
+  //Update middleman in data flow
+  await syncAllPrices(true);
+
+  btn.disabled = false;
+}
+
+/*
+ * Background worker to refresh prices for ALL stocks (Watchlist + Portfolio).
+ * Respects API limits and silently falls back to old prices if limits are hit.
+ */
+async function syncAllPrices() {
+  // Combine both arrays to reduce redundant API calls
+  const allSymbols = new Set();
+  portfolio.forEach((s) => allSymbols.add(s.symbol));
+  watchlist.forEach((s) => allSymbols.add(s.symbol));
+
+  let errorOccured = false;
+
+  // Fetch new prices for each stock from set
+  for (const symbol of allSymbols) {
+    // Suppress errors during bulk refresh (showError=false) to avoid flooding the user with messages
+    const newPrice = await getcurrentPrice(symbol, false);
+
+    // If newPrice is null, indicates error and price does not change,
+    // otherwise price updates in both datasets.
+    if (newPrice !== null && !isNaN(newPrice)) {
+      // Update Portfolio
+      const portStock = portfolio.find((s) => s.symbol === symbol);
+      if (portStock) portStock.lastPrice = newPrice;
+
+      // Update Watchlist
+      const watchStock = watchlist.find((s) => s.symbol === symbol);
+      if (watchStock) watchStock.price = newPrice;
+    } else {
+      // Ensures on any error, error is tracked
+      errorOccured = true;
+    }
+  }
+
+  // Save the synced data
+  localStorage.setItem("portfolio", JSON.stringify(portfolio));
+  localStorage.setItem("watchlist", JSON.stringify(watchlist));
+
+  // Update the UI
+  displayPortfolioValue();
+  displayWatchlist();
+
+  // Notify user if fallback data used
+  if (errorOccured) {
+    showToastError(
+      "API limit reached. Showing last known prices for some stocks.",
+    );
+  }
 }
 
 /*
@@ -718,8 +711,6 @@ function handleWatchlist() {
  * keeps price, change, and shares in sync with the portfolio, and saves to localStorage.
  */
 function addToWatchlist() {
-  console.log("working in watchlist");
-  //Cleaning formatting for data grabbed from page
   const watchlistStockName = validText(stockName.textContent);
   const watchlistSymbol = validText(stockSymbol.textContent);
   const watchlistPrice = validPrice(stockPrice.textContent);
@@ -733,8 +724,6 @@ function addToWatchlist() {
     stock.change = watchlistStockChange;
     stock.price = watchlistPrice;
     stock.shares = numShares;
-    console.log(`Updated ${watchlistStockName} (${watchlistSymbol})`);
-    console.log("Watchlist:", watchlist);
   } else {
     watchlist.push({
       name: watchlistStockName,
@@ -743,12 +732,8 @@ function addToWatchlist() {
       shares: numShares,
       change: watchlistStockChange,
     });
-    console.log(
-      `Added ${watchlistStockName} (${watchlistSymbol}) with ${numShares} shares.`,
-    );
-    console.log("Watchlist:", watchlist);
   }
-
+  //Save data
   localStorage.setItem("watchlist", JSON.stringify(watchlist));
 }
 
@@ -787,9 +772,6 @@ function displayWatchlist() {
  * Designed to handle button interactions dynamically while keeping the row self-contained.
  */
 function createWatchlistRow(stock) {
-  console.log("row in createwatchlist", stock.name);
-
-  //create article el as fixed point for populating
   const article = document.createElement("article");
   article.className =
     "bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:shadow-md";
@@ -799,9 +781,8 @@ function createWatchlistRow(stock) {
 
   //Split stock change string and determine css for change value
   const { changePrice, changePercent } = splitChangeString(stock.change);
-  const changeSign = stock.change[0];
   const colorClass =
-    changeSign === "+"
+    validPrice(changePrice) >= 0
       ? "text-green-500 bg-green-50"
       : "text-red-500 bg-red-50";
 
@@ -848,10 +829,7 @@ function createWatchlistRow(stock) {
   const delete_btn = article.querySelector(".delete-btn");
   delete_btn.addEventListener("click", () => {
     //Remove stock in watchlist
-    console.log(`Deleting ${stock.symbol} from watchlist!`);
     watchlist = watchlist.filter((s) => s.symbol !== stock.symbol);
-
-    console.log("Updated watchlist after delete", watchlist);
 
     //Update localStorage & re-render UI
     localStorage.setItem("watchlist", JSON.stringify(watchlist));
@@ -861,7 +839,6 @@ function createWatchlistRow(stock) {
   //Shows user details of stock data
   const viewBtn = article.querySelector(".view-btn");
   viewBtn.addEventListener("click", () => {
-    console.log(`Viewing details for ${stock.symbol}!`);
     search_input.value = stock.symbol;
     search_form.requestSubmit();
   });
@@ -869,42 +846,44 @@ function createWatchlistRow(stock) {
   return article;
 }
 
-async function handleRefresh() {
-  //Loop through watchlist and then update stock price
-  for (const stock of watchlist) {
-    console.log(stock.symbol);
-    const newData = await getStockData(stock.symbol);
+/*-- HELPER FUNCTIONS --*/
 
-    // skip invalid data
-    if (!newData) {
-      console.warn("Skipping invalid data for", stock.symbol);
-      continue;
-    }
+/**
+ * Shows a toast error message to the user for API/background issues.
+ * Uses a small setTimeout to ensure CSS transitions trigger smoothly, since JS
+ * executes immediately and may otherwise skip transition effects.
+ */
+function showToastError(message) {
+  //Set custom error msg, show to user
+  toastMessage.textContent = message;
+  toastContainer.classList.remove("hidden");
 
-    //Parse numeric vals
-    const priceNum = parseFloat(newData.price);
-    const changeNum = parseFloat(newData.change);
-    const changePercentNum = parseFloat(newData["change percent"]);
-    let stockChangeTxt;
+  // Small delay to allow the CSS transition to trigger smoothly but quick enough for no user lag
+  setTimeout(() => {
+    toastContainer.classList.remove("translate-y-[-20px]", "opacity-0");
+    toastContainer.classList.add("translate-y-0", "opacity-100");
+  }, 10);
 
-    //Determine sign & build formatted display
-    if (changeNum < 0) {
-      stockChangeTxt = `-$${Math.abs(changeNum).toFixed(2)} (${Math.abs(changePercentNum).toFixed(2)}%)`;
-    } else {
-      const sign = changeNum === 0 ? "" : "+";
-      stockChangeTxt = `${sign}$${changeNum.toFixed(2)} (+${changePercentNum.toFixed(2)}%)`;
-    }
-
-    stock.price = validPrice(priceNum);
-    stock.change = stockChangeTxt;
-  }
-
-  //Save & re-render watchlist
-  localStorage.setItem("watchlist", JSON.stringify(watchlist));
-  displayWatchlist();
+  // Reset any existing timer, then auto-hide after 5 seconds
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => hideToast(), 5000);
 }
 
-/*-- HELPER FUNCTIONS --*/
+/**
+ * Hides the toast error message with a slide/fade effect.
+ * Uses setTimeout to wait for the Tailwind transition duration (300ms) before fully
+ * hiding the element.
+ */
+function hideToast() {
+  // Slide it back up and fade it out
+  toastContainer.classList.remove("translate-y-0", "opacity-100");
+  toastContainer.classList.add("translate-y-[-20px]", "opacity-0");
+
+  // Wait for the CSS transition (300ms) to finish before actually hiding it
+  setTimeout(() => {
+    toastContainer.classList.add("hidden");
+  }, 300);
+}
 
 /*
  * Splits a stock change string (e.g., "+$1.75 (+0.67%)") into { changePrice, changePercent }.
@@ -936,14 +915,7 @@ function getShares(symbol) {
 /**
  * Loads portfolio/watchlist if set from localStorage to maintain persistence
  */
-function loadPortfolio() {
-  const loadPortfolio = JSON.parse(localStorage.getItem("portfolio"));
-  if (loadPortfolio) portfolio = loadPortfolio;
-}
-function loadWatchlist() {
-  const loadWatchlist = JSON.parse(localStorage.getItem("watchlist"));
-  if (loadWatchlist) watchlist = loadWatchlist;
-}
+
 function loadData() {
   const storedPortfolio = JSON.parse(localStorage.getItem("portfolio"));
   const storedWatchlist = JSON.parse(localStorage.getItem("watchlist"));
@@ -953,8 +925,9 @@ function loadData() {
 }
 
 /**
- * Ensures any price is only a number val
- */
+Extracts a clean numeric value from a formatted string (e.g., "$1,234.56" -> 1234.56).
+Returns NaN if the input is invalid.
+*/
 function validPrice(input) {
   if (input === null || input === undefined) return NaN;
 
@@ -968,14 +941,14 @@ function validPrice(input) {
 }
 
 /**
- * Ensures any text is only a cleaned up text val
+ * Ensures any text is only a cleaned up text content or returns empty string
  */
 function validText(input) {
   return input ? input.trim() : "";
 }
 
 /**
- * Reformats price with commas and upto 2 decimal place
+ * Reformats number into a price with commas and upto 2 decimal place
  */
 function formatPrice(num) {
   return num.toLocaleString(undefined, {
@@ -1018,8 +991,6 @@ function updateSearchState(updates) {
     }
   }
 
-  console.log("Search state updated:", searchState);
-
   if (searchState.terminate) {
     hideLoading();
     enableButtons();
@@ -1040,7 +1011,6 @@ function resetSearchState() {
     data: null,
     terminate: false,
   };
-  console.log("Search state reset:", searchState);
 }
 
 /**
@@ -1097,45 +1067,6 @@ function disableButtons() {
   document
     .querySelectorAll("#search-section button")
     .forEach((b) => (b.disabled = true));
-}
-
-/**
- * Tracks API calls to ensure less than 6 calls are made in a minute, a delay is added and no new calls are added to
- * avoid API errors due to API rate limit set by Alphaadvantage
- */
-async function trackAPICalls() {
-  const maxCallsPerMinute = 5;
-  const perCallDelay = 1000; // 1 second between calls
-  const safetyBuffer = 5000; // 5 second extra after window reset
-  const now = Date.now();
-
-  // If windowStart is null, this is the first call in a new window
-  if (!windowStart) {
-    windowStart = now;
-  }
-
-  APIcount++;
-
-  //Delay between each API call between by 1 second to avoid API errors
-  if (APIcount > 1) {
-    await delay(perCallDelay);
-  }
-
-  // If batch limit reached
-  if (APIcount >= maxCallsPerMinute) {
-    const timePassedInWindow = Date.now() - windowStart;
-    let waitTime = 60000 - timePassedInWindow + safetyBuffer;
-    if (waitTime > 0) {
-      console.log(
-        `Batch of ${maxCallsPerMinute} done. Waiting ${Math.ceil(waitTime / 1000)}s for window reset...`,
-      );
-      await delay(waitTime);
-    }
-
-    // Reset for next batch
-    APIcount = 0;
-    windowStart = null;
-  }
 }
 
 /**
@@ -1240,7 +1171,6 @@ async function fetchURL(url) {
     }
 
     const data = await response.json();
-    console.log("Testing fetchURL", data);
 
     return data;
   } catch (err) {
@@ -1282,7 +1212,6 @@ function displayError(err) {
     search_error.textContent =
       "Network error: Unable to reach the server. Check your internet connection.";
   } else {
-    //if(error){} check if lastErrorMsg is true, if yes display to user
     search_error.textContent = err.message;
   }
 }
@@ -1291,14 +1220,9 @@ function displayError(err) {
 
 /* EVENT Listeners:  for search and related user actions*/
 document.addEventListener("DOMContentLoaded", function () {
-  //Loading Portfolio/Watchlist Data & Displaying it on UI
-  //loadPortfolio();
-  //displayPortfolioValue();
   loadData();
   displayPortfolioValue();
   displayWatchlist();
-
-  console.log(portfolio);
 
   //Event Listener for background API issues error msg pop up
   closeToastBtn.addEventListener("click", hideToast);

@@ -23,9 +23,7 @@
           <i class="fa-solid fa-chart-line"></i> StockTracker Pro
         </h1>
 
-        <!-- Portfolio Stats -->
         <div class="flex gap-10 mt-4 md:mt-0">
-          <!-- Portfolio Value -->
           <div class="grid text-center">
             <span class="text-sm text-blue-200">Portfolio Value</span>
             <span class="font-bold text-xl" id="header-portfolio-value">
@@ -33,7 +31,6 @@
             </span>
           </div>
 
-          <!-- Stocks Owned -->
           <div class="grid text-center">
             <span class="text-sm text-blue-200">Stocks Owned</span>
             <span class="font-bold text-xl" id="header-stocks-owned"
@@ -122,7 +119,7 @@
           </div>
           <article
             id="active-stock-results"
-            class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
           >
             <div
               class="p-6 flex justify-between items-start bg-blue-50/30 border-b border-gray-100"
@@ -132,12 +129,11 @@
                   class="text-3xl font-extrabold text-gray-900"
                   id="active-name"
                 >
-                  Apple
                 </h2>
                 <span
                   class="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase mt-2 inline-block"
                   id="active-symbol"
-                  >AAPL</span
+                  ></span
                 >
               </div>
               <button
@@ -151,17 +147,17 @@
 
             <div class="p-8">
               <div
-                class="flex flex-col md:flex-row justify-between items-center gap-8"
+                class=" flex flex-col md:flex-row justify-between items-center gap-8"
               >
                 <div class="text-center md:text-left flex-shrink-0">
                   <h3
                     class="text-6xl font-black text-gray-900 tracking-tight"
                     id="active-price"
                   >
-                    $262.04
+                 
                   </h3>
                   <p class="font-bold text-lg mt-2" id="active-change">
-                    +$1.75 (+0.67%)
+                   
                   </p>
                 </div>
 
